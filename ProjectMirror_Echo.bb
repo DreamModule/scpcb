@@ -1,0 +1,837 @@
+;===============================================================================
+; PROJECT MIRROR: ECHO SYSTEM - "Echoes of the Past"
+; Blitz3D Module for SCP: Containment Breach
+; Day 3 Phantom Manifestation System
+;===============================================================================
+
+;-------------------------------------------------------------------------------
+; CONSTANTS
+;-------------------------------------------------------------------------------
+Const MAX_ECHO_EVENTS% = 32
+Const MAX_ACTIVE_ECHOES% = 4
+Const ECHO_TRIGGER_RADIUS# = 3.5
+Const ECHO_TRIGGER_RADIUS_SQ# = 12.25 ; 3.5^2 for optimized distance check
+
+Const ECHO_STATE_DORMANT% = 0
+Const ECHO_STATE_SPAWNING% = 1
+Const ECHO_STATE_ACTIVE% = 2
+Const ECHO_STATE_FADING% = 3
+Const ECHO_STATE_COMPLETE% = 4
+
+Const ECHO_TYPE_NPC% = 0
+Const ECHO_TYPE_SOUND% = 1
+Const ECHO_TYPE_PARTICLE% = 2
+Const ECHO_TYPE_COMBINED% = 3
+
+;-------------------------------------------------------------------------------
+; TYPE: ECHO EVENT DEFINITION
+;-------------------------------------------------------------------------------
+Type EchoEvent
+	Field id%
+	Field eventType%
+
+	; Trigger conditions
+	Field requiredDay%           ; Day when this echo can trigger (always 3)
+	Field sourceDay%             ; Day when original event happened (1 or 2)
+	Field triggerRoomName$       ; Room template name to match
+	Field triggerX#, triggerY#, triggerZ#  ; Local offset from room origin
+	Field triggerRadiusSq#       ; Squared radius for distance check
+
+	; Required story flags (all must be true)
+	Field requiredFlags%[4]
+	Field requiredFlagValues%[4]
+	Field requiredFlagCount%
+
+	; Phantom NPC data
+	Field phantomModelPath$
+	Field phantomScale#
+	Field phantomAnimStart%
+	Field phantomAnimEnd%
+	Field phantomAnimSpeed#
+	Field phantomMoveTarget%     ; If true, phantom walks to a point
+	Field phantomTargetX#, phantomTargetY#, phantomTargetZ#
+
+	; Visual effects
+	Field baseAlpha#             ; Maximum alpha (usually 0.3-0.7)
+	Field glowColor%[3]          ; RGB for additive glow
+	Field particleType%          ; Particle effect index
+
+	; Audio
+	Field soundPath$
+	Field soundVolume#
+	Field soundLoop%
+
+	; Duration
+	Field spawnDuration#         ; Frames to fade in
+	Field activeDuration#        ; Frames to stay visible
+	Field fadeDuration#          ; Frames to fade out
+
+	; State tracking
+	Field triggered%             ; Has been triggered this session
+	Field cooldown#              ; Frames until can trigger again
+
+	; Associated dialog record from Story system
+	Field linkedRecordDay%
+	Field linkedRecordRoom$
+End Type
+
+;-------------------------------------------------------------------------------
+; TYPE: ACTIVE ECHO INSTANCE
+;-------------------------------------------------------------------------------
+Type ActiveEcho
+	Field event.EchoEvent
+	Field state%
+	Field stateTimer#
+
+	; 3D entities
+	Field phantomEntity%
+	Field phantomPivot%
+	Field glowSprite%
+
+	; Animation
+	Field currentFrame#
+
+	; Sound
+	Field soundChannel%
+	Field sound%
+
+	; Visual
+	Field currentAlpha#
+	Field pulsePhase#
+
+	; Position (world space)
+	Field worldX#, worldY#, worldZ#
+
+	; Movement interpolation
+	Field startX#, startY#, startZ#
+	Field moveProgress#
+
+	; Room reference
+	Field room.Rooms
+End Type
+
+;-------------------------------------------------------------------------------
+; GLOBALS
+;-------------------------------------------------------------------------------
+Global EchoSystemInitialized% = False
+Global EchoUpdateTimer# = 0.0
+Global EchoCheckInterval# = 10.0  ; Check every 10 frames for performance
+Global ActiveEchoCount% = 0
+
+; Pre-loaded resources for common echoes
+Global EchoPhantomTexture% = 0
+Global EchoGlowTexture% = 0
+Global EchoAmbientSound% = 0
+
+; Distortion effect
+Global EchoDistortionActive% = False
+Global EchoDistortionIntensity# = 0.0
+
+Dim EchoEventRegistry.EchoEvent(MAX_ECHO_EVENTS)
+Global EchoEventCount% = 0
+
+;===============================================================================
+; INITIALIZATION
+;===============================================================================
+Function InitEchoSystem()
+	If EchoSystemInitialized Then Return
+
+	; Load shared resources
+	EchoPhantomTexture = LoadTexture("GFX\Effects\echo_phantom.png", 2)
+	If EchoPhantomTexture <> 0 Then
+		TextureBlend EchoPhantomTexture, 3  ; Additive blend
+	EndIf
+
+	EchoGlowTexture = LoadTexture("GFX\Effects\echo_glow.png", 2)
+	If EchoGlowTexture <> 0 Then
+		TextureBlend EchoGlowTexture, 3
+	EndIf
+
+	EchoAmbientSound = LoadSound("SFX\Ambient\echo_whisper.ogg")
+
+	; Reset state
+	EchoEventCount = 0
+	ActiveEchoCount = 0
+	EchoDistortionActive = False
+	EchoDistortionIntensity = 0.0
+
+	; Register predefined echo events
+	RegisterPredefinedEchoes()
+
+	EchoSystemInitialized = True
+End Function
+
+;===============================================================================
+; ECHO EVENT REGISTRATION
+;===============================================================================
+Function CreateEchoEvent.EchoEvent(id%, sourceDay%, roomName$, localX#, localY#, localZ#)
+	If EchoEventCount >= MAX_ECHO_EVENTS Then Return Null
+
+	Local e.EchoEvent = New EchoEvent
+
+	e\id = id
+	e\eventType = ECHO_TYPE_COMBINED
+	e\requiredDay = 3                     ; Always triggers on Day 3
+	e\sourceDay = sourceDay
+	e\triggerRoomName = roomName
+	e\triggerX = localX
+	e\triggerY = localY
+	e\triggerZ = localZ
+	e\triggerRadiusSq = ECHO_TRIGGER_RADIUS_SQ
+
+	; Default values
+	e\phantomScale = 1.0
+	e\phantomAnimStart = 0
+	e\phantomAnimEnd = 100
+	e\phantomAnimSpeed = 1.0
+	e\phantomMoveTarget = False
+	e\baseAlpha = 0.5
+	e\glowColor[0] = 100
+	e\glowColor[1] = 150
+	e\glowColor[2] = 255
+	e\particleType = 0
+	e\soundVolume = 0.7
+	e\soundLoop = False
+	e\spawnDuration = 35.0    ; 0.5 sec at 70 fps
+	e\activeDuration = 350.0  ; 5 seconds
+	e\fadeDuration = 70.0     ; 1 second
+	e\triggered = False
+	e\cooldown = 0.0
+	e\requiredFlagCount = 0
+
+	EchoEventRegistry(EchoEventCount) = e
+	EchoEventCount = EchoEventCount + 1
+
+	Return e
+End Function
+
+Function SetEchoPhantom(e.EchoEvent, modelPath$, scale#, animStart%, animEnd%, animSpeed#)
+	If e = Null Then Return
+
+	e\phantomModelPath = modelPath
+	e\phantomScale = scale
+	e\phantomAnimStart = animStart
+	e\phantomAnimEnd = animEnd
+	e\phantomAnimSpeed = animSpeed
+	e\eventType = ECHO_TYPE_NPC
+End Function
+
+Function SetEchoMovement(e.EchoEvent, targetX#, targetY#, targetZ#)
+	If e = Null Then Return
+
+	e\phantomMoveTarget = True
+	e\phantomTargetX = targetX
+	e\phantomTargetY = targetY
+	e\phantomTargetZ = targetZ
+End Function
+
+Function SetEchoSound(e.EchoEvent, soundPath$, volume#, loop%)
+	If e = Null Then Return
+
+	e\soundPath = soundPath
+	e\soundVolume = volume
+	e\soundLoop = loop
+
+	If e\eventType = ECHO_TYPE_NPC Then
+		e\eventType = ECHO_TYPE_COMBINED
+	Else
+		e\eventType = ECHO_TYPE_SOUND
+	EndIf
+End Function
+
+Function SetEchoVisuals(e.EchoEvent, alpha#, glowR%, glowG%, glowB%)
+	If e = Null Then Return
+
+	e\baseAlpha = alpha
+	e\glowColor[0] = glowR
+	e\glowColor[1] = glowG
+	e\glowColor[2] = glowB
+End Function
+
+Function SetEchoDuration(e.EchoEvent, spawnFrames#, activeFrames#, fadeFrames#)
+	If e = Null Then Return
+
+	e\spawnDuration = spawnFrames
+	e\activeDuration = activeFrames
+	e\fadeDuration = fadeFrames
+End Function
+
+Function AddEchoRequirement(e.EchoEvent, flagIndex%, flagValue%)
+	If e = Null Then Return
+	If e\requiredFlagCount >= 4 Then Return
+
+	e\requiredFlags[e\requiredFlagCount] = flagIndex
+	e\requiredFlagValues[e\requiredFlagCount] = flagValue
+	e\requiredFlagCount = e\requiredFlagCount + 1
+End Function
+
+Function LinkEchoToRecord(e.EchoEvent, recordDay%, recordRoom$)
+	If e = Null Then Return
+
+	e\linkedRecordDay = recordDay
+	e\linkedRecordRoom = recordRoom
+End Function
+
+;===============================================================================
+; PREDEFINED ECHO EVENTS
+;===============================================================================
+Function RegisterPredefinedEchoes()
+	Local e.EchoEvent
+
+	; Echo 1: Steve's last moments (seen in Day 1, echoes in Day 3)
+	e = CreateEchoEvent(1, 1, "room2storage", 0.0, 0.5, 2.0)
+	SetEchoPhantom(e, "GFX\NPCs\classd.b3d", 0.5, 26, 39, 0.8)
+	SetEchoSound(e, "SFX\Character\Steve\LastWords1.ogg", 0.6, False)
+	SetEchoVisuals(e, 0.4, 80, 120, 200)
+	SetEchoDuration(e, 40.0, 420.0, 70.0)
+	AddEchoRequirement(e, FLAG_STEVE_MET, 1)
+	AddEchoRequirement(e, FLAG_STEVE_DEAD, 1)
+
+	; Echo 2: Guard execution (Day 1 event)
+	e = CreateEchoEvent(2, 1, "room2testroom", -1.5, 0.5, 0.0)
+	SetEchoPhantom(e, "GFX\NPCs\guard.b3d", 0.5, 816, 919, 1.0)
+	SetEchoSound(e, "SFX\Character\Guard\Execution.ogg", 0.7, False)
+	SetEchoVisuals(e, 0.5, 200, 80, 80)
+	SetEchoDuration(e, 35.0, 350.0, 70.0)
+	AddEchoRequirement(e, FLAG_GUARD_SPARED, 0) ; Guard was NOT spared
+
+	; Echo 3: Scientist's plea (Day 2 event)
+	e = CreateEchoEvent(3, 2, "room2offices", 2.0, 0.5, -1.0)
+	SetEchoPhantom(e, "GFX\NPCs\scientist.b3d", 0.03, 78, 150, 0.6)
+	SetEchoSound(e, "SFX\Character\Scientist\Plea.ogg", 0.5, False)
+	SetEchoVisuals(e, 0.35, 100, 200, 100)
+	SetEchoDuration(e, 50.0, 280.0, 60.0)
+	AddEchoRequirement(e, FLAG_SCIENTIST_HELPED, 1)
+
+	; Echo 4: Steve running (Day 2, if saved)
+	e = CreateEchoEvent(4, 2, "room2sl", 0.0, 0.5, 3.0)
+	SetEchoPhantom(e, "GFX\NPCs\classd.b3d", 0.5, 155, 197, 1.5)
+	SetEchoMovement(e, 0.0, 0.5, -5.0)
+	SetEchoSound(e, "SFX\Character\Steve\Running.ogg", 0.4, False)
+	SetEchoVisuals(e, 0.3, 50, 150, 255)
+	SetEchoDuration(e, 30.0, 210.0, 50.0)
+	AddEchoRequirement(e, FLAG_STEVE_SAVED, 1)
+
+	; Echo 5: 049 encounter (Day 1 or 2)
+	e = CreateEchoEvent(5, 1, "room049", 0.0, 0.8, 2.5)
+	SetEchoPhantom(e, "GFX\NPCs\scp-049.b3d", 0.22, 5, 45, 0.4)
+	SetEchoSound(e, "SFX\SCP\049\Greeting.ogg", 0.8, False)
+	SetEchoVisuals(e, 0.6, 50, 50, 50)
+	SetEchoDuration(e, 70.0, 490.0, 100.0)
+	AddEchoRequirement(e, FLAG_049_CURED, 1)
+
+	; Echo 6: Harrison's office (Day 2, PDA location)
+	e = CreateEchoEvent(6, 2, "room2offices2", 1.0, 1.2, 0.5)
+	e\eventType = ECHO_TYPE_SOUND  ; No phantom, just sound and glow
+	SetEchoSound(e, "SFX\Character\Harrison\Recording.ogg", 0.7, False)
+	SetEchoVisuals(e, 0.0, 255, 200, 50)
+	SetEchoDuration(e, 20.0, 560.0, 40.0)
+	AddEchoRequirement(e, FLAG_HARRISON_PDA, 1)
+
+	; Echo 7: MTF breach announcement (Day 2)
+	e = CreateEchoEvent(7, 2, "room2ccont", 0.0, 2.0, 0.0)
+	e\eventType = ECHO_TYPE_SOUND
+	SetEchoSound(e, "SFX\Character\MTF\AnnouncBefore.ogg", 0.5, False)
+	SetEchoVisuals(e, 0.0, 255, 100, 100)
+	SetEchoDuration(e, 10.0, 350.0, 30.0)
+	AddEchoRequirement(e, FLAG_MTF_CONTACTED, 1)
+End Function
+
+;===============================================================================
+; MAIN UPDATE LOOP
+;===============================================================================
+Function UpdateEchoEvents()
+	; Only active on Day 3
+	If CurrentDay <> 3 Then Return
+
+	; Performance: don't check every frame
+	EchoUpdateTimer = EchoUpdateTimer + FPSfactor
+	If EchoUpdateTimer < EchoCheckInterval Then
+		; But always update active echoes
+		UpdateActiveEchoes()
+		Return
+	EndIf
+	EchoUpdateTimer = 0.0
+
+	; Get player position
+	If Collider = 0 Then Return
+	Local playerX# = EntityX(Collider, True)
+	Local playerY# = EntityY(Collider, True)
+	Local playerZ# = EntityZ(Collider, True)
+
+	; Check trigger conditions for each registered echo
+	For i% = 0 To EchoEventCount - 1
+		Local e.EchoEvent = EchoEventRegistry(i)
+		If e = Null Then Continue
+
+		; Skip if already triggered or on cooldown
+		If e\triggered Then Continue
+		If e\cooldown > 0.0 Then
+			e\cooldown = e\cooldown - EchoCheckInterval
+			Continue
+		EndIf
+
+		; Skip if max active echoes reached
+		If ActiveEchoCount >= MAX_ACTIVE_ECHOES Then Continue
+
+		; Check if player is in the correct room
+		If PlayerRoom = Null Then Continue
+		If PlayerRoom\RoomTemplate = Null Then Continue
+
+		Local roomName$ = PlayerRoom\RoomTemplate\Name
+		If Lower(roomName) <> Lower(e\triggerRoomName) Then Continue
+
+		; Calculate world position of trigger
+		Local triggerWorldX# = EntityX(PlayerRoom\obj) + e\triggerX
+		Local triggerWorldY# = e\triggerY
+		Local triggerWorldZ# = EntityZ(PlayerRoom\obj) + e\triggerZ
+
+		; Distance check (squared for performance)
+		Local dx# = playerX - triggerWorldX
+		Local dy# = playerY - triggerWorldY
+		Local dz# = playerZ - triggerWorldZ
+		Local distSq# = dx*dx + dy*dy + dz*dz
+
+		If distSq > e\triggerRadiusSq Then Continue
+
+		; Check required story flags
+		Local flagsOk% = True
+		For f% = 0 To e\requiredFlagCount - 1
+			If GetStoryFlag(e\requiredFlags[f]) <> e\requiredFlagValues[f] Then
+				flagsOk = False
+				Exit
+			EndIf
+		Next
+
+		If Not flagsOk Then Continue
+
+		; Check for linked dialog records from previous days
+		If e\linkedRecordDay > 0 Then
+			Local rec.DialogEventRecord = GetDialogEventsForRoom(PlayerRoom, e\linkedRecordDay)
+			If rec = Null Then Continue
+		EndIf
+
+		; All conditions met - spawn the echo
+		SpawnEcho(e, PlayerRoom)
+	Next
+
+	; Update active echoes
+	UpdateActiveEchoes()
+
+	; Update distortion effect
+	UpdateEchoDistortion()
+End Function
+
+;===============================================================================
+; ECHO SPAWNING
+;===============================================================================
+Function SpawnEcho(e.EchoEvent, room.Rooms)
+	If e = Null Or room = Null Then Return
+	If ActiveEchoCount >= MAX_ACTIVE_ECHOES Then Return
+
+	Local echo.ActiveEcho = New ActiveEcho
+
+	echo\event = e
+	echo\state = ECHO_STATE_SPAWNING
+	echo\stateTimer = 0.0
+	echo\room = room
+	echo\currentAlpha = 0.0
+	echo\pulsePhase = 0.0
+	echo\currentFrame = Float(e\phantomAnimStart)
+	echo\moveProgress = 0.0
+
+	; Calculate world position
+	echo\worldX = EntityX(room\obj) + e\triggerX
+	echo\worldY = e\triggerY
+	echo\worldZ = EntityZ(room\obj) + e\triggerZ
+	echo\startX = echo\worldX
+	echo\startY = echo\worldY
+	echo\startZ = echo\worldZ
+
+	; Create pivot for positioning
+	echo\phantomPivot = CreatePivot()
+	PositionEntity echo\phantomPivot, echo\worldX, echo\worldY, echo\worldZ
+
+	; Load phantom model if specified
+	If e\phantomModelPath <> "" Then
+		echo\phantomEntity = LoadAnimMesh(e\phantomModelPath)
+		If echo\phantomEntity <> 0 Then
+			ScaleEntity echo\phantomEntity, e\phantomScale, e\phantomScale, e\phantomScale
+			PositionEntity echo\phantomEntity, echo\worldX, echo\worldY, echo\worldZ
+			EntityParent echo\phantomEntity, echo\phantomPivot
+
+			; Set up ghostly appearance
+			EntityAlpha echo\phantomEntity, 0.0
+			EntityFX echo\phantomEntity, 1 + 8  ; Full bright + no fog
+
+			; Apply phantom texture if available
+			If EchoPhantomTexture <> 0 Then
+				EntityTexture echo\phantomEntity, EchoPhantomTexture, 0, 1
+			EndIf
+
+			; Face the player initially
+			Local px# = EntityX(Collider, True)
+			Local pz# = EntityZ(Collider, True)
+			Local angle# = ATan2(px - echo\worldX, pz - echo\worldZ)
+			RotateEntity echo\phantomEntity, 0, angle, 0
+
+			; Hide from collision
+			EntityType echo\phantomEntity, 0
+			EntityPickMode echo\phantomEntity, 0
+		EndIf
+	EndIf
+
+	; Create glow sprite
+	If EchoGlowTexture <> 0 Then
+		echo\glowSprite = CreateSprite(echo\phantomPivot)
+		EntityTexture echo\glowSprite, EchoGlowTexture
+		ScaleSprite echo\glowSprite, 1.5, 1.5
+		SpriteViewMode echo\glowSprite, 1  ; Fixed size
+		EntityFX echo\glowSprite, 1  ; Full bright
+		EntityAlpha echo\glowSprite, 0.0
+		EntityColor echo\glowSprite, e\glowColor[0], e\glowColor[1], e\glowColor[2]
+		PositionEntity echo\glowSprite, 0, 0.8, 0  ; Slightly above phantom feet
+	EndIf
+
+	; Load and play sound
+	If e\soundPath <> "" Then
+		echo\sound = LoadSound(e\soundPath)
+		If echo\sound <> 0 Then
+			; Spatial sound - use PlaySound2 pattern from Main.bb
+			echo\soundChannel = EmitSound(echo\sound, echo\phantomPivot)
+			If echo\soundChannel <> 0 Then
+				ChannelVolume echo\soundChannel, 0.0  ; Start silent, fade in
+			EndIf
+		EndIf
+	EndIf
+
+	; Mark event as triggered
+	e\triggered = True
+
+	; Set corresponding story flag
+	Select e\id
+		Case 1  ; Steve echo
+			SetStoryFlag(FLAG_ECHO_STEVE_SEEN, 1)
+		Case 2  ; Guard echo
+			SetStoryFlag(FLAG_ECHO_GUARD_SEEN, 1)
+		Case 3  ; Scientist echo
+			SetStoryFlag(FLAG_ECHO_SCIENTIST_SEEN, 1)
+	End Select
+
+	; Trigger visual distortion
+	EchoDistortionActive = True
+	EchoDistortionIntensity = 0.3
+
+	; Play ambient whisper
+	If EchoAmbientSound <> 0 Then
+		PlaySound EchoAmbientSound
+	EndIf
+
+	ActiveEchoCount = ActiveEchoCount + 1
+End Function
+
+;===============================================================================
+; ACTIVE ECHO UPDATE
+;===============================================================================
+Function UpdateActiveEchoes()
+	For echo.ActiveEcho = Each ActiveEcho
+		If echo\event = Null Then
+			DestroyEcho(echo)
+			Continue
+		EndIf
+
+		Local e.EchoEvent = echo\event
+
+		; State machine
+		Select echo\state
+			;-------------------------------------------------------------------
+			Case ECHO_STATE_SPAWNING
+				echo\stateTimer = echo\stateTimer + FPSfactor
+				Local spawnProgress# = echo\stateTimer / e\spawnDuration
+
+				If spawnProgress >= 1.0 Then
+					spawnProgress = 1.0
+					echo\state = ECHO_STATE_ACTIVE
+					echo\stateTimer = 0.0
+				EndIf
+
+				; Fade in
+				echo\currentAlpha = e\baseAlpha * spawnProgress
+
+				; Apply alpha to entities
+				If echo\phantomEntity <> 0 Then
+					EntityAlpha echo\phantomEntity, echo\currentAlpha
+				EndIf
+				If echo\glowSprite <> 0 Then
+					EntityAlpha echo\glowSprite, echo\currentAlpha * 0.5
+				EndIf
+
+				; Fade in sound
+				If echo\soundChannel <> 0 Then
+					ChannelVolume echo\soundChannel, e\soundVolume * spawnProgress
+				EndIf
+
+			;-------------------------------------------------------------------
+			Case ECHO_STATE_ACTIVE
+				echo\stateTimer = echo\stateTimer + FPSfactor
+
+				; Pulse effect
+				echo\pulsePhase = echo\pulsePhase + FPSfactor * 0.05
+				Local pulse# = 0.8 + 0.2 * Sin(echo\pulsePhase * 360.0)
+				echo\currentAlpha = e\baseAlpha * pulse
+
+				If echo\phantomEntity <> 0 Then
+					EntityAlpha echo\phantomEntity, echo\currentAlpha
+
+					; Update animation
+					echo\currentFrame = echo\currentFrame + e\phantomAnimSpeed * FPSfactor
+					If echo\currentFrame > Float(e\phantomAnimEnd) Then
+						echo\currentFrame = Float(e\phantomAnimStart)
+					EndIf
+					SetAnimTime echo\phantomEntity, echo\currentFrame
+
+					; Handle movement if specified
+					If e\phantomMoveTarget Then
+						echo\moveProgress = echo\moveProgress + FPSfactor * 0.005
+						If echo\moveProgress > 1.0 Then echo\moveProgress = 1.0
+
+						Local newX# = echo\startX + (e\phantomTargetX - echo\startX) * echo\moveProgress
+						Local newY# = echo\startY + (e\phantomTargetY - echo\startY) * echo\moveProgress
+						Local newZ# = echo\startZ + (e\phantomTargetZ - echo\startZ) * echo\moveProgress
+
+						PositionEntity echo\phantomPivot, newX, newY, newZ
+
+						; Face movement direction
+						If echo\moveProgress < 1.0 Then
+							Local moveAngle# = ATan2(e\phantomTargetX - newX, e\phantomTargetZ - newZ)
+							RotateEntity echo\phantomEntity, 0, moveAngle, 0
+						EndIf
+					EndIf
+				EndIf
+
+				If echo\glowSprite <> 0 Then
+					EntityAlpha echo\glowSprite, echo\currentAlpha * 0.5
+					; Subtle scale pulse
+					Local glowScale# = 1.5 + 0.3 * Sin(echo\pulsePhase * 180.0)
+					ScaleSprite echo\glowSprite, glowScale, glowScale
+				EndIf
+
+				; Check if active duration expired
+				If echo\stateTimer >= e\activeDuration Then
+					echo\state = ECHO_STATE_FADING
+					echo\stateTimer = 0.0
+				EndIf
+
+				; Check if sound finished (for non-looping sounds)
+				If echo\soundChannel <> 0 And Not e\soundLoop Then
+					If Not ChannelPlaying(echo\soundChannel) Then
+						; Sound done, can start fading earlier
+						If echo\stateTimer > e\activeDuration * 0.5 Then
+							echo\state = ECHO_STATE_FADING
+							echo\stateTimer = 0.0
+						EndIf
+					EndIf
+				EndIf
+
+			;-------------------------------------------------------------------
+			Case ECHO_STATE_FADING
+				echo\stateTimer = echo\stateTimer + FPSfactor
+				Local fadeProgress# = echo\stateTimer / e\fadeDuration
+
+				If fadeProgress >= 1.0 Then
+					fadeProgress = 1.0
+					echo\state = ECHO_STATE_COMPLETE
+				EndIf
+
+				; Fade out
+				echo\currentAlpha = e\baseAlpha * (1.0 - fadeProgress)
+
+				If echo\phantomEntity <> 0 Then
+					EntityAlpha echo\phantomEntity, echo\currentAlpha
+				EndIf
+				If echo\glowSprite <> 0 Then
+					EntityAlpha echo\glowSprite, echo\currentAlpha * 0.5
+				EndIf
+
+				; Fade out sound
+				If echo\soundChannel <> 0 Then
+					ChannelVolume echo\soundChannel, e\soundVolume * (1.0 - fadeProgress)
+				EndIf
+
+			;-------------------------------------------------------------------
+			Case ECHO_STATE_COMPLETE
+				; Set cooldown on event
+				e\cooldown = 700.0  ; 10 seconds before can trigger again
+				DestroyEcho(echo)
+		End Select
+	Next
+End Function
+
+;===============================================================================
+; ECHO CLEANUP
+;===============================================================================
+Function DestroyEcho(echo.ActiveEcho)
+	If echo = Null Then Return
+
+	; Stop sound
+	If echo\soundChannel <> 0 Then
+		StopChannel echo\soundChannel
+	EndIf
+	If echo\sound <> 0 Then
+		FreeSound echo\sound
+	EndIf
+
+	; Free 3D entities
+	If echo\phantomEntity <> 0 Then
+		FreeEntity echo\phantomEntity
+	EndIf
+	If echo\glowSprite <> 0 Then
+		FreeEntity echo\glowSprite
+	EndIf
+	If echo\phantomPivot <> 0 Then
+		FreeEntity echo\phantomPivot
+	EndIf
+
+	ActiveEchoCount = ActiveEchoCount - 1
+	If ActiveEchoCount < 0 Then ActiveEchoCount = 0
+
+	Delete echo
+End Function
+
+;===============================================================================
+; DISTORTION EFFECT
+;===============================================================================
+Function UpdateEchoDistortion()
+	If Not EchoDistortionActive Then Return
+
+	; Decay distortion
+	EchoDistortionIntensity = EchoDistortionIntensity - FPSfactor * 0.002
+
+	If EchoDistortionIntensity <= 0.0 Then
+		EchoDistortionIntensity = 0.0
+		EchoDistortionActive = False
+	EndIf
+End Function
+
+Function RenderEchoDistortion()
+	If Not EchoDistortionActive Then Return
+	If EchoDistortionIntensity <= 0.0 Then Return
+
+	; Screen edge vignette with blue tint
+	Local gw% = GraphicsWidth()
+	Local gh% = GraphicsHeight()
+	Local intensity% = Int(EchoDistortionIntensity * 100.0)
+
+	; Draw gradient borders
+	Color 20, 40, intensity
+
+	; Top edge
+	For y% = 0 To 30
+		Local alpha% = 30 - y
+		Color alpha/2, alpha, intensity + alpha
+		Line 0, y, gw, y
+	Next
+
+	; Bottom edge
+	For y% = 0 To 30
+		Local alpha2% = 30 - y
+		Color alpha2/2, alpha2, intensity + alpha2
+		Line 0, gh - y - 1, gw, gh - y - 1
+	Next
+
+	; Static noise overlay (simple random dots)
+	If EchoDistortionIntensity > 0.1 Then
+		Local dots% = Int(EchoDistortionIntensity * 500.0)
+		For i% = 0 To dots
+			Local nx% = Rand(0, gw - 1)
+			Local ny% = Rand(0, gh - 1)
+			Local nc% = Rand(50, 150)
+			Color nc, nc, nc + 50
+			Plot nx, ny
+		Next
+	EndIf
+End Function
+
+;===============================================================================
+; MANUAL ECHO TRIGGER (for scripted events)
+;===============================================================================
+Function TriggerEchoByID(echoID%)
+	For i% = 0 To EchoEventCount - 1
+		Local e.EchoEvent = EchoEventRegistry(i)
+		If e <> Null And e\id = echoID Then
+			If Not e\triggered And PlayerRoom <> Null Then
+				SpawnEcho(e, PlayerRoom)
+				Return True
+			EndIf
+		EndIf
+	Next
+	Return False
+End Function
+
+Function ResetEchoTriggers()
+	For e.EchoEvent = Each EchoEvent
+		e\triggered = False
+		e\cooldown = 0.0
+	Next
+End Function
+
+;===============================================================================
+; CLEANUP
+;===============================================================================
+Function CleanupEchoSystem()
+	; Destroy all active echoes
+	For echo.ActiveEcho = Each ActiveEcho
+		DestroyEcho(echo)
+	Next
+
+	; Delete all echo events
+	For e.EchoEvent = Each EchoEvent
+		Delete e
+	Next
+
+	; Clear registry
+	For i% = 0 To MAX_ECHO_EVENTS - 1
+		EchoEventRegistry(i) = Null
+	Next
+	EchoEventCount = 0
+
+	; Free shared resources
+	If EchoPhantomTexture <> 0 Then
+		FreeTexture EchoPhantomTexture
+		EchoPhantomTexture = 0
+	EndIf
+	If EchoGlowTexture <> 0 Then
+		FreeTexture EchoGlowTexture
+		EchoGlowTexture = 0
+	EndIf
+	If EchoAmbientSound <> 0 Then
+		FreeSound EchoAmbientSound
+		EchoAmbientSound = 0
+	EndIf
+
+	EchoSystemInitialized = False
+End Function
+
+;===============================================================================
+; DEBUG
+;===============================================================================
+Function DebugEchoSystem()
+	Color 255, 255, 0
+	Text 10, 200, "=== ECHO SYSTEM DEBUG ==="
+	Text 10, 215, "Active Echoes: " + ActiveEchoCount + "/" + MAX_ACTIVE_ECHOES
+	Text 10, 230, "Distortion: " + Int(EchoDistortionIntensity * 100) + "%"
+
+	Local y% = 250
+	For echo.ActiveEcho = Each ActiveEcho
+		Local stateName$ = ""
+		Select echo\state
+			Case ECHO_STATE_SPAWNING : stateName = "SPAWNING"
+			Case ECHO_STATE_ACTIVE : stateName = "ACTIVE"
+			Case ECHO_STATE_FADING : stateName = "FADING"
+			Case ECHO_STATE_COMPLETE : stateName = "COMPLETE"
+		End Select
+
+		Text 10, y, "Echo #" + echo\event\id + ": " + stateName + " (alpha=" + Int(echo\currentAlpha * 100) + "%)"
+		y = y + 15
+	Next
+End Function
