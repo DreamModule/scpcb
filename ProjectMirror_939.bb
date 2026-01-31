@@ -111,7 +111,7 @@ Function RegisterScientistVoices()
 	LearnVoiceFromPath("SFX\Character\Scientist\Plea.ogg", VOICE_CAT_SCIENTIST, "Scientist", 50, False)
 End Function
 
-Function LearnVoice(soundPath$, category%, speakerName$, emotionalWeight%, isPersonal%)
+Function LearnVoice.LearnedVoice(soundPath$, category%, speakerName$, emotionalWeight%, isPersonal%)
 	If Not VoiceLearningActive Then Return Null
 	If TotalLearnedVoices >= VOICE_CACHE_SIZE Then Return Null
 
