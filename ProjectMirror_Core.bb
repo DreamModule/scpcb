@@ -190,6 +190,9 @@ Function UpdateProjectMirror()
 		If PlayerRoom <> Null Then
 			CheckDialogTriggers(PlayerRoom)
 		EndIf
+
+		; день 2 - катсцена у 173
+		UpdateDay2Logic()
 	EndIf
 
 	; эхо система (день 3)
@@ -225,6 +228,7 @@ Function RenderProjectMirror()
 	If MirrorStoryEnabled Then
 		RenderDayTransition()
 		RenderDialog()
+		RenderSubtitles()
 	EndIf
 
 	; эффекты эха

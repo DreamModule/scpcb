@@ -52,6 +52,18 @@ Const FLAG_SAW_999% = 23
 Const FLAG_HEARD_173_RUMORS% = 24
 Const FLAG_BREACH_STARTED% = 25
 
+; Day 2 флаги - "Protocol & Premonition"
+Const FLAG_DAY2_STARTED% = 26
+Const FLAG_MET_CONVOY% = 27
+Const FLAG_SAW_D9341% = 28
+Const FLAG_AT_173_CHAMBER% = 29
+Const FLAG_WITNESSED_PROCEDURE% = 30
+Const FLAG_LIGHTS_FLICKERED% = 31
+Const FLAG_PROCEDURE_COMPLETE% = 32
+Const FLAG_SAW_HARRISON_TERMINAL% = 33
+Const FLAG_079_INTEGRATION% = 34
+Const FLAG_DAY2_COMPLETE% = 35
+
 Global DayTransitionPending% = False
 Global DayTransitionTimer# = 0.0
 Global DayTransitionFade# = 0.0
@@ -138,6 +150,63 @@ Global DialogTypewriterSpeed# = 0.05
 Dim DialogOptions.DialogOption(MAX_DIALOG_OPTIONS)
 Dim DialogNodeCache.DialogNode(MAX_DIALOG_NODES)
 
+; === ДЕНЬ 2: КАТСЦЕНА 173 ===
+
+; состояния катсцены
+Const SCENE_INACTIVE% = 0
+Const SCENE_WAITING_PLAYER% = 1
+Const SCENE_INTRO% = 2
+Const SCENE_DCLASS_ENTER% = 3
+Const SCENE_ANNOUNCEMENT% = 4
+Const SCENE_LIGHTS_FLICKER% = 5
+Const SCENE_LIGHTS_RESTORE% = 6
+Const SCENE_HARRISON_VOICE% = 7
+Const SCENE_DCLASS_EXIT% = 8
+Const SCENE_STEVE_RADIO% = 9
+Const SCENE_COMPLETE% = 10
+
+Type ContainmentScene
+	Field state%
+	Field timer#
+	Field phase%
+	Field room173.Rooms
+	Field playerPosition%
+	Field lightsFlickering%
+	Field flickerCount%
+	Field flickerTimer#
+	Field announcementPlayed%
+	Field intercomChannel%
+End Type
+
+Global ActiveScene.ContainmentScene = Null
+
+; NPC актёры для катсцены
+Type SceneActor
+	Field npc.NPCs
+	Field role$
+	Field targetX#, targetY#, targetZ#
+	Field state%
+	Field visible%
+End Type
+
+Global SceneSteve.SceneActor = Null
+Global SceneGuard1.SceneActor = Null
+Global SceneGuard2.SceneActor = Null
+Global SceneDClass1.SceneActor = Null
+Global SceneDClass2.SceneActor = Null
+Global SceneDClass9341.SceneActor = Null
+
+; звуки интро оригинала
+Global IntroAnnouncementSFX% = 0
+Global LightsFlickerSFX% = 0
+Global IntercomSFX% = 0
+Global AlarmSFX% = 0
+
+; субтитры
+Global SubtitleText$ = ""
+Global SubtitleTimer# = 0.0
+Global SubtitleSpeaker$ = ""
+
 Function InitStorySystem()
 	If GStoryState = Null Then
 		GStoryState = New StoryState
@@ -169,9 +238,16 @@ Function InitStorySystem()
 	HasHarrisonPDA = False
 	HasHarrisonEye = False
 
-	; инит диалогов Дня 1
+	; инит диалогов
 	SetupDay1Dialogs()
 	SetupDay1Triggers()
+	SetupDay2Dialogs()
+	SetupDay2Triggers()
+
+	; звуки для катсцены
+	IntroAnnouncementSFX = LoadSound("SFX\Room\Intro\Announcement.ogg")
+	LightsFlickerSFX = LoadSound("SFX\General\LightFlicker.ogg")
+	IntercomSFX = LoadSound("SFX\General\Intercom.ogg")
 End Function
 
 Function SetStoryFlag(flagIndex%, value% = 1)
@@ -292,7 +368,7 @@ Function RenderDayTransition()
 				Case 1
 					subtitle = "РУТИНА"
 				Case 2
-					subtitle = "ПРОРЫВ"
+					subtitle = "ПРОТОКОЛ"
 				Case 3
 					subtitle = "РАСПЛАТА"
 			End Select
@@ -968,6 +1044,11 @@ Function DebugStoryState()
 	If GetStoryFlag(FLAG_COFFEE_WITH_STEVE) Then Text 10, flagY, "Coffee w/ Steve" : flagY = flagY + 12
 	If GetStoryFlag(FLAG_SAW_999) Then Text 10, flagY, "Saw 999" : flagY = flagY + 12
 	If GetStoryFlag(FLAG_BREACH_STARTED) Then Text 10, flagY, "BREACH!" : flagY = flagY + 12
+	; Day 2 flags
+	If GetStoryFlag(FLAG_DAY2_STARTED) Then Text 10, flagY, "Day2 Started" : flagY = flagY + 12
+	If GetStoryFlag(FLAG_SAW_D9341) Then Text 10, flagY, "Saw D-9341" : flagY = flagY + 12
+	If GetStoryFlag(FLAG_WITNESSED_PROCEDURE) Then Text 10, flagY, "Witnessed 173" : flagY = flagY + 12
+	If GetStoryFlag(FLAG_079_INTEGRATION) Then Text 10, flagY, "079 Integration" : flagY = flagY + 12
 End Function
 
 Function GetBranchName$(branch%)
@@ -982,4 +1063,577 @@ Function GetBranchName$(branch%)
 			Return "SACRIFICE"
 	End Select
 	Return "UNKNOWN"
+End Function
+
+; ============================================================================
+; ДЕНЬ 2: "PROTOCOL & PREMONITION"
+; Маркус ведёт D-класса к 173. Твист - процедура проходит "нормально"
+; ============================================================================
+
+Function SetupDay2Dialogs()
+	Local node.DialogNode
+	Local opt.DialogOption
+
+	; --- УТРО: БРИФИНГ ---
+	; ID 100-109
+
+	node = CreateDialogNode(100, "[КПК]", "ZADANIE: Soprovodit' ob'ekty klassa D k kamere soderzhaniya SCP-173. Yavit'sya v checkpoint LCZ-A.", "", "")
+	node\autoAdvanceTime = 210.0
+
+	; --- ВСТРЕЧА С КОНВОЕМ ---
+	; ID 110-119
+
+	node = CreateDialogNode(110, "Steve", "Markus! Ty zamykayushchii. Sledi, chtoby eti krysy ne dergalis'.", "", "")
+	AddDialogOption(node, "Ponyal.", 111, 0, FLAG_MET_CONVOY, 1)
+	AddDialogOption(node, "Skolko ih?", 112, 0, FLAG_MET_CONVOY, 1)
+
+	node = CreateDialogNode(111, "Steve", "Osobenno etot, 9341-i. Mutnyy tip. Smotrit tak, budto znaet chto-to.", "", "")
+	opt = AddDialogOption(node, "*smotrish' na 9341*", 113, 0, FLAG_SAW_D9341, 1)
+	opt = AddDialogOption(node, "Vse oni odinakovy.", -1, -2, FLAG_SAW_D9341, 1)
+
+	node = CreateDialogNode(112, "Steve", "Troe. Standart dlya chistki 173-go. Dvoe nashi, dvoe s drugoy smeny.", "", "")
+	AddDialogOption(node, "Kto eshche v gruppe?", 114, 0, -1, 0)
+	AddDialogOption(node, "Poidyom.", 111, 0, -1, 0)
+
+	node = CreateDialogNode(113, "D-9341", "*molcha smotrit na tebya, potom otvodyat vzglyad*", "", "")
+	node\autoAdvanceTime = 105.0
+
+	node = CreateDialogNode(114, "Steve", "Dzhonson i Gomez. I doktor Franklin na nablyudenii. Poidyom, nam pora.", "", "")
+	AddDialogOption(node, "[Sleduete za grupppoi]", -1, 0, -1, 0)
+
+	; --- У КАМЕРЫ 173 ---
+	; ID 120-129
+
+	node = CreateDialogNode(120, "Steve", "Zanyat' pozitsii. Markus, ty u dveri. Yesli chto - strelyai bez preduprezhdeniya.", "", "")
+	opt = AddDialogOption(node, "Ponyal.", 121, 0, FLAG_AT_173_CHAMBER, 1)
+	opt = AddDialogOption(node, "Eto pravda neobhodimo?", 122, 2, FLAG_AT_173_CHAMBER, 1)
+
+	node = CreateDialogNode(121, "Steve", "Franklin, nachinai. D-klassy - vnutr'.", "", "")
+	node\autoAdvanceTime = 140.0
+
+	node = CreateDialogNode(122, "Steve", "*vzdyhaet* Etot ob'ekt... On ubil uzhe mnogo lyudei. Ne veri milym rozhitsam. Vnutr'.", "", "")
+	node\autoAdvanceTime = 140.0
+
+	; --- АНОНС (КАК В ОРИГИНАЛЕ) ---
+	; ID 130-139
+
+	node = CreateDialogNode(130, "[INTERKOM]", "Attention all Class-D personnel. Please enter the containment chamber.", "", "")
+	node\autoAdvanceTime = 175.0
+
+	node = CreateDialogNode(131, "[INTERKOM]", "SCP-173 containment chamber cleaning will begin shortly. Please maintain direct eye contact with SCP-173.", "", "")
+	node\autoAdvanceTime = 210.0
+
+	; --- ТВИСТ: СВЕТ МИГАЕТ, НО ВСЁ ОК ---
+	; ID 140-149
+
+	node = CreateDialogNode(140, "[...]", "*svet migaet... slyshny strelyayushchie iskry... tishina...*", "", "")
+	node\autoAdvanceTime = 140.0
+
+	node = CreateDialogNode(141, "[...]", "*svet vklyuchayetsya obratno*", "", "")
+	node\autoAdvanceTime = 70.0
+
+	node = CreateDialogNode(142, "[INTERKOM - Harrison]", "Pokazateli v norme. Vyvodite sub'ektov. Otlichnaya rabota.", "", "")
+	node\autoAdvanceTime = 140.0
+
+	node = CreateDialogNode(143, "Steve", "*po racii* Prinyato. Proneslo, parni. Uhodim.", "", "")
+	AddDialogOption(node, "[Vykhodite iz zony]", 144, 0, FLAG_PROCEDURE_COMPLETE, 1)
+
+	node = CreateDialogNode(144, "Steve", "Markus, provodi D-klassov obratno. Ya otchitayus' Franklinu.", "", "")
+	opt = AddDialogOption(node, "Sdelayem.", -1, 0, -1, 0)
+	opt = AddDialogOption(node, "Mne pokazalos', ili svet...", 145, 1, -1, 0)
+
+	node = CreateDialogNode(145, "Steve", "*pauza* ...da, migalo. Znaesh', eta kamera... Inogda proiskhodyat strannyye veshchi. No segodnya - vsyo chistо. Poydyom.", "", "")
+	AddDialogOption(node, "[Kivaesh']", -1, 0, FLAG_LIGHTS_FLICKERED, 1)
+
+	; --- ФИНАЛ ДНЯ 2: ТЕРМИНАЛ ХАРРИСОНА ---
+	; ID 150-159
+
+	node = CreateDialogNode(150, "[TERMINAL]", "SISTEMA 079 INTEGRIROVANA. ZAPUSK ALGORITMA NAZNACHEN NA 06:00 ZAVTRASHNEGO DNYA. - DR. HARRISON", "", "")
+	node\autoAdvanceTime = 245.0
+
+	node = CreateDialogNode(151, "[TERMINAL]", "PRIMECHANIE: 'Zerkalo' gotovo. Oni ne poimut, poka ne budet slishkom pozdno.", "", "")
+	node\autoAdvanceTime = 175.0
+
+	node = CreateDialogNode(152, "[...]", "*ekran gasnet*", "", "")
+	node\autoAdvanceTime = 70.0
+
+	; --- ПЕРЕХОД К ДНЮ 3 ---
+	; ID 160
+
+	node = CreateDialogNode(160, "Steve", "*po racii, ustalyi golos* Markus, smena okonchenya. Uvidimsya zavtra. Khorosho, chto segonya vsyo proshlo gladko, da?", "", "")
+	opt = AddDialogOption(node, "Da... gladko.", -1, 0, FLAG_DAY2_COMPLETE, 1)
+	opt = AddDialogOption(node, "U menya plohoye predchuvstvie.", -1, 3, FLAG_DAY2_COMPLETE, 1)
+End Function
+
+Function SetupDay2Triggers()
+	Local trig.DialogTrigger
+
+	; checkpoint - vstrecha s konvoem
+	trig = New DialogTrigger
+	trig\roomName = "checkpoint1"
+	trig\dialogID = 110
+	trig\triggerRadius = 4.0
+	trig\oneShot = True
+	trig\triggered = False
+	trig\requiredDay = 2
+	trig\requiredFlag = FLAG_DAY2_STARTED
+	trig\requiredFlagValue = 1
+
+	; komnata 173 - nachalo sceny
+	trig = New DialogTrigger
+	trig\roomName = "173"
+	trig\dialogID = 120
+	trig\triggerRadius = 5.0
+	trig\oneShot = True
+	trig\triggered = False
+	trig\requiredDay = 2
+	trig\requiredFlag = FLAG_MET_CONVOY
+	trig\requiredFlagValue = 1
+
+	; ofisnaya zona - terminal Harrisona
+	trig = New DialogTrigger
+	trig\roomName = "room2offices"
+	trig\dialogID = 150
+	trig\triggerRadius = 2.0
+	trig\oneShot = True
+	trig\triggered = False
+	trig\requiredDay = 2
+	trig\requiredFlag = FLAG_PROCEDURE_COMPLETE
+	trig\requiredFlagValue = 1
+End Function
+
+; --- СТАРТ ДНЯ 2 ---
+
+Function StartDay2Intro()
+	If CurrentDay <> 2 Then Return
+	If GetStoryFlag(FLAG_DAY2_STARTED) Then Return
+
+	SetStoryFlag(FLAG_DAY2_STARTED, 1)
+
+	; zadanie na KPK
+	StartDialog(100)
+
+	; spawn v checkpoint zone
+	SpawnPlayerDay2()
+
+	; spawn actorov (budut rasstavleny pozje po triggeru)
+	DebugLog "Day 2 initialized"
+End Function
+
+Function SpawnPlayerDay2()
+	Local spawnRoom.Rooms = Null
+
+	For r.Rooms = Each Rooms
+		If r\RoomTemplate <> Null Then
+			If r\RoomTemplate\Name = "checkpoint1" Then
+				spawnRoom = r
+				Exit
+			EndIf
+		EndIf
+	Next
+
+	If spawnRoom = Null Then
+		For r.Rooms = Each Rooms
+			If r\RoomTemplate <> Null Then
+				If Instr(r\RoomTemplate\Name, "checkpoint") > 0 Then
+					spawnRoom = r
+					Exit
+				EndIf
+			EndIf
+		Next
+	EndIf
+
+	If spawnRoom <> Null Then
+		Local spawnX# = EntityX(spawnRoom\obj)
+		Local spawnY# = 0.5
+		Local spawnZ# = EntityZ(spawnRoom\obj) + 2.0
+
+		PositionEntity Collider, spawnX, spawnY, spawnZ
+		ResetEntity Collider
+		PlayerRoom = spawnRoom
+
+		DebugLog "Day 2 spawn at checkpoint"
+	EndIf
+End Function
+
+; --- РАССТАНОВКА АКТЁРОВ ---
+
+Function SpawnDay2Actors(room.Rooms)
+	If room = Null Then Return
+
+	Local baseX# = EntityX(room\obj)
+	Local baseY# = 0.5
+	Local baseZ# = EntityZ(room\obj)
+
+	; Steve
+	Local steveNPC.NPCs = CreateNPC(NPCtypeGuard, baseX + 1.0, baseY, baseZ - 2.0)
+	If steveNPC <> Null Then
+		SceneSteve = New SceneActor
+		SceneSteve\npc = steveNPC
+		SceneSteve\role = "Steve"
+		SceneSteve\state = 0
+		SceneSteve\visible = True
+	EndIf
+
+	; Guard 1
+	Local guard1NPC.NPCs = CreateNPC(NPCtypeGuard, baseX - 1.5, baseY, baseZ - 2.0)
+	If guard1NPC <> Null Then
+		SceneGuard1 = New SceneActor
+		SceneGuard1\npc = guard1NPC
+		SceneGuard1\role = "Johnson"
+		SceneGuard1\state = 0
+		SceneGuard1\visible = True
+	EndIf
+
+	; Guard 2
+	Local guard2NPC.NPCs = CreateNPC(NPCtypeGuard, baseX + 2.5, baseY, baseZ - 2.0)
+	If guard2NPC <> Null Then
+		SceneGuard2 = New SceneActor
+		SceneGuard2\npc = guard2NPC
+		SceneGuard2\role = "Gomez"
+		SceneGuard2\state = 0
+		SceneGuard2\visible = True
+	EndIf
+
+	; D-Class 1
+	Local d1NPC.NPCs = CreateNPC(NPCtypeDClass, baseX - 0.5, baseY, baseZ)
+	If d1NPC <> Null Then
+		SceneDClass1 = New SceneActor
+		SceneDClass1\npc = d1NPC
+		SceneDClass1\role = "D-8432"
+		SceneDClass1\state = 0
+		SceneDClass1\visible = True
+	EndIf
+
+	; D-Class 2
+	Local d2NPC.NPCs = CreateNPC(NPCtypeDClass, baseX + 0.5, baseY, baseZ)
+	If d2NPC <> Null Then
+		SceneDClass2 = New SceneActor
+		SceneDClass2\npc = d2NPC
+		SceneDClass2\role = "D-7120"
+		SceneDClass2\state = 0
+		SceneDClass2\visible = True
+	EndIf
+
+	; D-9341 - glavnyi geroy originala
+	Local d9341NPC.NPCs = CreateNPC(NPCtypeDClass, baseX, baseY, baseZ + 0.5)
+	If d9341NPC <> Null Then
+		SceneDClass9341 = New SceneActor
+		SceneDClass9341\npc = d9341NPC
+		SceneDClass9341\role = "D-9341"
+		SceneDClass9341\state = 0
+		SceneDClass9341\visible = True
+	EndIf
+
+	DebugLog "Day 2 actors spawned"
+End Function
+
+; --- КАТСЦЕНА У 173 ---
+
+Function Start173Scene(room.Rooms)
+	If ActiveScene <> Null Then Return
+
+	ActiveScene = New ContainmentScene
+	ActiveScene\state = SCENE_WAITING_PLAYER
+	ActiveScene\timer = 0.0
+	ActiveScene\phase = 0
+	ActiveScene\room173 = room
+	ActiveScene\playerPosition = 0
+	ActiveScene\lightsFlickering = False
+	ActiveScene\flickerCount = 0
+	ActiveScene\flickerTimer = 0.0
+	ActiveScene\announcementPlayed = False
+
+	CanPlayerMove = False
+
+	DebugLog "173 scene started"
+End Function
+
+Function Update173Scene()
+	If ActiveScene = Null Then Return
+
+	ActiveScene\timer = ActiveScene\timer + FPSfactor
+
+	Select ActiveScene\state
+
+		Case SCENE_WAITING_PLAYER
+			If ActiveScene\timer > 35.0 Then
+				ActiveScene\state = SCENE_INTRO
+				ActiveScene\timer = 0.0
+				StartDialog(120)
+			EndIf
+
+		Case SCENE_INTRO
+			If Not DialogActive Then
+				ActiveScene\state = SCENE_DCLASS_ENTER
+				ActiveScene\timer = 0.0
+				MoveActorsIntoCell()
+			EndIf
+
+		Case SCENE_DCLASS_ENTER
+			If ActiveScene\timer > 140.0 Then
+				ActiveScene\state = SCENE_ANNOUNCEMENT
+				ActiveScene\timer = 0.0
+				StartDialog(130)
+				If IntroAnnouncementSFX <> 0 Then
+					ActiveScene\intercomChannel = PlaySound(IntroAnnouncementSFX)
+				EndIf
+			EndIf
+
+		Case SCENE_ANNOUNCEMENT
+			If Not DialogActive Then
+				ActiveScene\timer = ActiveScene\timer + FPSfactor
+				If ActiveScene\timer > 70.0 Then
+					StartDialog(131)
+					ActiveScene\state = SCENE_LIGHTS_FLICKER
+					ActiveScene\timer = 0.0
+				EndIf
+			EndIf
+
+		Case SCENE_LIGHTS_FLICKER
+			If Not DialogActive Then
+				If ActiveScene\timer > 70.0 Then
+					; nachalo miganiya
+					ActiveScene\lightsFlickering = True
+					ActiveScene\flickerCount = 0
+
+					If LightsFlickerSFX <> 0 Then PlaySound(LightsFlickerSFX)
+
+					StartDialog(140)
+					ActiveScene\state = SCENE_LIGHTS_RESTORE
+					ActiveScene\timer = 0.0
+				EndIf
+			EndIf
+
+		Case SCENE_LIGHTS_RESTORE
+			UpdateLightsFlicker()
+
+			If Not DialogActive Then
+				ActiveScene\lightsFlickering = False
+				StartDialog(141)
+				ActiveScene\state = SCENE_HARRISON_VOICE
+				ActiveScene\timer = 0.0
+			EndIf
+
+		Case SCENE_HARRISON_VOICE
+			If Not DialogActive Then
+				If ActiveScene\timer > 35.0 Then
+					If IntercomSFX <> 0 Then PlaySound(IntercomSFX)
+					StartDialog(142)
+					ActiveScene\state = SCENE_DCLASS_EXIT
+					ActiveScene\timer = 0.0
+				EndIf
+			EndIf
+
+		Case SCENE_DCLASS_EXIT
+			If Not DialogActive Then
+				MoveActorsOutOfCell()
+				If ActiveScene\timer > 105.0 Then
+					ActiveScene\state = SCENE_STEVE_RADIO
+					ActiveScene\timer = 0.0
+					StartDialog(143)
+				EndIf
+			EndIf
+
+		Case SCENE_STEVE_RADIO
+			If Not DialogActive Then
+				ActiveScene\state = SCENE_COMPLETE
+				ActiveScene\timer = 0.0
+				CanPlayerMove = True
+				SetStoryFlag(FLAG_WITNESSED_PROCEDURE, 1)
+			EndIf
+
+		Case SCENE_COMPLETE
+			; scena zavershena
+			CleanupScene()
+
+	End Select
+End Function
+
+Function UpdateLightsFlicker()
+	If ActiveScene = Null Then Return
+	If Not ActiveScene\lightsFlickering Then Return
+
+	ActiveScene\flickerTimer = ActiveScene\flickerTimer + FPSfactor
+
+	If ActiveScene\flickerTimer > 7.0 Then
+		ActiveScene\flickerTimer = 0.0
+		ActiveScene\flickerCount = ActiveScene\flickerCount + 1
+
+		; miganie osveshcheniya v komnate
+		If ActiveScene\room173 <> Null Then
+			For i% = 0 To MaxRoomLights - 1
+				If ActiveScene\room173\Lights[i] <> 0 Then
+					If ActiveScene\flickerCount Mod 2 = 0 Then
+						HideEntity ActiveScene\room173\Lights[i]
+					Else
+						ShowEntity ActiveScene\room173\Lights[i]
+					EndIf
+				EndIf
+			Next
+		EndIf
+
+		If ActiveScene\flickerCount >= 6 Then
+			; vosstanovit' svet
+			If ActiveScene\room173 <> Null Then
+				For i% = 0 To MaxRoomLights - 1
+					If ActiveScene\room173\Lights[i] <> 0 Then
+						ShowEntity ActiveScene\room173\Lights[i]
+					EndIf
+				Next
+			EndIf
+			ActiveScene\lightsFlickering = False
+		EndIf
+	EndIf
+End Function
+
+Function MoveActorsIntoCell()
+	If ActiveScene = Null Then Return
+	If ActiveScene\room173 = Null Then Return
+
+	Local cellX# = EntityX(ActiveScene\room173\obj)
+	Local cellY# = 0.5
+	Local cellZ# = EntityZ(ActiveScene\room173\obj)
+
+	If SceneDClass1 <> Null And SceneDClass1\npc <> Null Then
+		PositionEntity SceneDClass1\npc\Collider, cellX - 1.0, cellY, cellZ + 2.0
+	EndIf
+
+	If SceneDClass2 <> Null And SceneDClass2\npc <> Null Then
+		PositionEntity SceneDClass2\npc\Collider, cellX + 1.0, cellY, cellZ + 2.0
+	EndIf
+
+	If SceneDClass9341 <> Null And SceneDClass9341\npc <> Null Then
+		PositionEntity SceneDClass9341\npc\Collider, cellX, cellY, cellZ + 3.0
+	EndIf
+End Function
+
+Function MoveActorsOutOfCell()
+	If ActiveScene = Null Then Return
+	If ActiveScene\room173 = Null Then Return
+
+	Local exitX# = EntityX(ActiveScene\room173\obj)
+	Local exitY# = 0.5
+	Local exitZ# = EntityZ(ActiveScene\room173\obj) - 4.0
+
+	If SceneDClass1 <> Null And SceneDClass1\npc <> Null Then
+		PositionEntity SceneDClass1\npc\Collider, exitX - 1.0, exitY, exitZ
+	EndIf
+
+	If SceneDClass2 <> Null And SceneDClass2\npc <> Null Then
+		PositionEntity SceneDClass2\npc\Collider, exitX + 1.0, exitY, exitZ
+	EndIf
+
+	If SceneDClass9341 <> Null And SceneDClass9341\npc <> Null Then
+		PositionEntity SceneDClass9341\npc\Collider, exitX, exitY, exitZ - 1.0
+	EndIf
+End Function
+
+Function CleanupScene()
+	If ActiveScene <> Null Then
+		Delete ActiveScene
+		ActiveScene = Null
+	EndIf
+
+	; udalyaem actorov (oni ushli)
+	If SceneDClass1 <> Null Then
+		If SceneDClass1\npc <> Null Then RemoveNPC(SceneDClass1\npc)
+		Delete SceneDClass1
+		SceneDClass1 = Null
+	EndIf
+
+	If SceneDClass2 <> Null Then
+		If SceneDClass2\npc <> Null Then RemoveNPC(SceneDClass2\npc)
+		Delete SceneDClass2
+		SceneDClass2 = Null
+	EndIf
+
+	If SceneDClass9341 <> Null Then
+		If SceneDClass9341\npc <> Null Then RemoveNPC(SceneDClass9341\npc)
+		Delete SceneDClass9341
+		SceneDClass9341 = Null
+	EndIf
+
+	DebugLog "Scene cleanup complete"
+End Function
+
+; --- ФИНАЛ ДНЯ 2 ---
+
+Function TriggerDay2Finale()
+	If Not GetStoryFlag(FLAG_SAW_HARRISON_TERMINAL) Then Return
+
+	SetStoryFlag(FLAG_DAY2_COMPLETE, 1)
+	StartDialog(160)
+End Function
+
+Function OnDay2Complete()
+	If GetStoryFlag(FLAG_DAY2_COMPLETE) And Not DialogActive Then
+		TriggerDayTransition(3)
+	EndIf
+End Function
+
+; --- СУБТИТРЫ ---
+
+Function ShowSubtitle(speaker$, text$, duration#)
+	SubtitleSpeaker = speaker
+	SubtitleText = text
+	SubtitleTimer = duration
+End Function
+
+Function UpdateSubtitles()
+	If SubtitleTimer > 0.0 Then
+		SubtitleTimer = SubtitleTimer - FPSfactor
+		If SubtitleTimer <= 0.0 Then
+			SubtitleText = ""
+			SubtitleSpeaker = ""
+		EndIf
+	EndIf
+End Function
+
+Function RenderSubtitles()
+	If SubtitleText = "" Then Return
+
+	Local gw% = GraphicsWidth()
+	Local gh% = GraphicsHeight()
+
+	Local boxW% = gw - 200
+	Local boxH% = 50
+	Local boxX% = 100
+	Local boxY% = gh - 100
+
+	Color 0, 0, 0
+	Rect boxX, boxY, boxW, boxH, True
+
+	Color 80, 80, 80
+	Rect boxX, boxY, boxW, boxH, False
+
+	If SubtitleSpeaker <> "" Then
+		Color 180, 150, 50
+		Text boxX + 10, boxY + 5, SubtitleSpeaker + ":"
+	EndIf
+
+	Color 220, 220, 220
+	Text boxX + 10, boxY + 22, SubtitleText
+End Function
+
+; --- HOOK DLYa UpdateProjectMirror ---
+
+Function UpdateDay2Logic()
+	If CurrentDay <> 2 Then Return
+
+	; init dnya 2
+	If Not GetStoryFlag(FLAG_DAY2_STARTED) Then
+		StartDay2Intro()
+	EndIf
+
+	; update katstseny
+	If ActiveScene <> Null Then
+		Update173Scene()
+	EndIf
+
+	; subtitry
+	UpdateSubtitles()
+
+	; proverka finala
+	OnDay2Complete()
 End Function
