@@ -300,49 +300,60 @@ Function UpdateEchoEvents()
 
 	For i% = 0 To EchoEventCount - 1
 		Local e.EchoEvent = EchoEventRegistry(i)
-		If e = Null Then Continue
+		Local skipEcho% = False
 
-		If e\triggered Then Continue
-		If e\cooldown > 0.0 Then
-			e\cooldown = e\cooldown - EchoCheckInterval
-			Continue
-		EndIf
+		If e = Null Then skipEcho = True
 
-		If ActiveEchoCount >= MAX_ACTIVE_ECHOES Then Continue
-
-		If PlayerRoom = Null Then Continue
-		If PlayerRoom\RoomTemplate = Null Then Continue
-
-		Local roomName$ = PlayerRoom\RoomTemplate\Name
-		If Lower(roomName) <> Lower(e\triggerRoomName) Then Continue
-
-		Local triggerWorldX# = EntityX(PlayerRoom\obj) + e\triggerX
-		Local triggerWorldY# = e\triggerY
-		Local triggerWorldZ# = EntityZ(PlayerRoom\obj) + e\triggerZ
-
-		Local dx# = playerX - triggerWorldX
-		Local dy# = playerY - triggerWorldY
-		Local dz# = playerZ - triggerWorldZ
-		Local distSq# = dx*dx + dy*dy + dz*dz
-
-		If distSq > e\triggerRadiusSq Then Continue
-
-		Local flagsOk% = True
-		For f% = 0 To e\requiredFlagCount - 1
-			If GetStoryFlag(GetEchoRequiredFlag(e, f)) <> GetEchoRequiredFlagVal(e, f) Then
-				flagsOk = False
-				Exit
+		If (Not skipEcho) Then
+			If e\triggered Then skipEcho = True
+			If e\cooldown > 0.0 Then
+				e\cooldown = e\cooldown - EchoCheckInterval
+				skipEcho = True
 			EndIf
-		Next
-
-		If Not flagsOk Then Continue
-
-		If e\linkedRecordDay > 0 Then
-			Local rec.DialogEventRecord = GetDialogEventsForRoom(PlayerRoom, e\linkedRecordDay)
-			If rec = Null Then Continue
 		EndIf
 
-		SpawnEcho(e, PlayerRoom)
+		If (Not skipEcho) And ActiveEchoCount >= MAX_ACTIVE_ECHOES Then skipEcho = True
+		If (Not skipEcho) And PlayerRoom = Null Then skipEcho = True
+		If (Not skipEcho) And PlayerRoom\RoomTemplate = Null Then skipEcho = True
+
+		If (Not skipEcho) Then
+			Local roomName$ = PlayerRoom\RoomTemplate\Name
+			If Lower(roomName) <> Lower(e\triggerRoomName) Then skipEcho = True
+
+			If (Not skipEcho) Then
+				Local triggerWorldX# = EntityX(PlayerRoom\obj) + e\triggerX
+				Local triggerWorldY# = e\triggerY
+				Local triggerWorldZ# = EntityZ(PlayerRoom\obj) + e\triggerZ
+
+				Local dx# = playerX - triggerWorldX
+				Local dy# = playerY - triggerWorldY
+				Local dz# = playerZ - triggerWorldZ
+				Local distSq# = dx*dx + dy*dy + dz*dz
+
+				If distSq > e\triggerRadiusSq Then skipEcho = True
+
+				If (Not skipEcho) Then
+					Local flagsOk% = True
+					For f% = 0 To e\requiredFlagCount - 1
+						If GetStoryFlag(GetEchoRequiredFlag(e, f)) <> GetEchoRequiredFlagVal(e, f) Then
+							flagsOk = False
+							Exit
+						EndIf
+					Next
+
+					If (Not flagsOk) Then skipEcho = True
+
+					If (Not skipEcho) And e\linkedRecordDay > 0 Then
+						Local rec.DialogEventRecord = GetDialogEventsForRoom(PlayerRoom, e\linkedRecordDay)
+						If rec = Null Then skipEcho = True
+					EndIf
+
+					If (Not skipEcho) Then
+						SpawnEcho(e, PlayerRoom)
+					EndIf
+				EndIf
+			EndIf
+		EndIf
 	Next
 
 	UpdateActiveEchoes()
@@ -444,10 +455,8 @@ Function UpdateActiveEchoes()
 	For echo.ActiveEcho = Each ActiveEcho
 		If echo\event = Null Then
 			DestroyEcho(echo)
-			Continue
-		EndIf
-
-		Local e.EchoEvent = echo\event
+		Else
+			Local e.EchoEvent = echo\event
 
 		Select echo\state
 
@@ -551,6 +560,7 @@ Function UpdateActiveEchoes()
 				e\cooldown = 700.0
 				DestroyEcho(echo)
 		End Select
+		EndIf
 	Next
 End Function
 

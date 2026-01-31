@@ -237,15 +237,14 @@ Function UpdateFoxSquad(squad.MTFFoxSquad)
 
 	For i% = 0 To squad\memberCount - 1
 		Local fox.MTFFoxState = GetSquadMember(squad, i)
-		If fox = Null Then Continue
-		If fox\npcRef = Null Then Continue
+		If fox <> Null And fox\npcRef <> Null Then
+			UpdateFoxMember(fox)
 
-		UpdateFoxMember(fox)
+			If fox\hasLOS Then totalLOS = totalLOS + 1
 
-		If fox\hasLOS Then totalLOS = totalLOS + 1
-
-		Local distSq# = GetDistanceSquaredToPlayer(fox\npcRef)
-		If distSq < closestDistSq Then closestDistSq = distSq
+			Local distSq# = GetDistanceSquaredToPlayer(fox\npcRef)
+			If distSq < closestDistSq Then closestDistSq = distSq
+		EndIf
 	Next
 
 	; Алерт уровень
@@ -493,26 +492,26 @@ Function InitiateEngagement(squad.MTFFoxSquad)
 
 	For i% = 0 To squad\memberCount - 1
 		Local fox.MTFFoxState = GetSquadMember(squad, i)
-		If fox = Null Then Continue
-		If fox\role = FOX_ROLE_FLANKER_L Then flankerLAssigned = True
-		If fox\role = FOX_ROLE_FLANKER_R Then flankerRAssigned = True
+		If fox <> Null Then
+			If fox\role = FOX_ROLE_FLANKER_L Then flankerLAssigned = True
+			If fox\role = FOX_ROLE_FLANKER_R Then flankerRAssigned = True
+		EndIf
 	Next
 
 	If (Not flankerLAssigned) Or (Not flankerRAssigned) Then
 		Local assigned% = 0
 		For i% = 0 To squad\memberCount - 1
 			Local fox.MTFFoxState = GetSquadMember(squad, i)
-			If fox = Null Then Continue
-			If fox = squad\leader Then Continue
-
-			If (Not flankerLAssigned) And assigned = 0 Then
-				fox\role = FOX_ROLE_FLANKER_L
-				flankerLAssigned = True
-				assigned = assigned + 1
-			ElseIf Not flankerRAssigned And assigned = 1 Then
-				fox\role = FOX_ROLE_FLANKER_R
-				flankerRAssigned = True
-				assigned = assigned + 1
+			If fox <> Null And fox <> squad\leader Then
+				If (Not flankerLAssigned) And assigned = 0 Then
+					fox\role = FOX_ROLE_FLANKER_L
+					flankerLAssigned = True
+					assigned = assigned + 1
+				ElseIf (Not flankerRAssigned) And assigned = 1 Then
+					fox\role = FOX_ROLE_FLANKER_R
+					flankerRAssigned = True
+					assigned = assigned + 1
+				EndIf
 			EndIf
 		Next
 	EndIf

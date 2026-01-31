@@ -300,15 +300,15 @@ End Function
 Function FindMatchingRecipe.SpecialRecipe(itemName$, tempName$, setting%)
 	For i% = 0 To SpecialRecipeCount - 1
 		Local r.SpecialRecipe = SpecialRecipes(i)
-		If r = Null Then Continue
-
-		If r\inputTempName <> "" Then
-			If Lower(r\inputTempName) = Lower(tempName) And r\setting = setting Then
-				Return r
-			EndIf
-		ElseIf r\inputItemName <> "" Then
-			If Lower(r\inputItemName) = Lower(itemName) And r\setting = setting Then
-				Return r
+		If r <> Null Then
+			If r\inputTempName <> "" Then
+				If Lower(r\inputTempName) = Lower(tempName) And r\setting = setting Then
+					Return r
+				EndIf
+			ElseIf r\inputItemName <> "" Then
+				If Lower(r\inputItemName) = Lower(itemName) And r\setting = setting Then
+					Return r
+				EndIf
 			EndIf
 		EndIf
 	Next

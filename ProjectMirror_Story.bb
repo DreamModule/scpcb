@@ -945,17 +945,20 @@ Function CheckDialogTriggers(room.Rooms)
 	EndIf
 
 	For trig.DialogTrigger = Each DialogTrigger
-		If trig\triggered And trig\oneShot Then Continue
-		If trig\roomName <> roomName Then Continue
-		If trig\requiredDay > 0 And trig\requiredDay <> CurrentDay Then Continue
+		Local skipTrig% = False
+		If trig\triggered And trig\oneShot Then skipTrig = True
+		If trig\roomName <> roomName Then skipTrig = True
+		If trig\requiredDay > 0 And trig\requiredDay <> CurrentDay Then skipTrig = True
 		If trig\requiredFlag >= 0 Then
-			If GetStoryFlag(trig\requiredFlag) <> trig\requiredFlagValue Then Continue
+			If GetStoryFlag(trig\requiredFlag) <> trig\requiredFlagValue Then skipTrig = True
 		EndIf
 
-		; trigger!
-		trig\triggered = True
-		StartDialog(trig\dialogID)
-		Return
+		If (Not skipTrig) Then
+			; trigger!
+			trig\triggered = True
+			StartDialog(trig\dialogID)
+			Return
+		EndIf
 	Next
 End Function
 
