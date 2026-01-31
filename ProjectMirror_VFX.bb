@@ -36,7 +36,7 @@ Global EndingFadeActive% = False
 Global EndingFadeAlpha# = 0.0
 Global EndingText$ = ""
 Global EndingSubtext$ = ""
-Global EndingTimer# = 0.0
+Global VFXEndingTimer# = 0.0
 
 ; phantom visuals
 Global PhantomSprite% = 0
@@ -465,7 +465,7 @@ End Function
 Function StartEndingSequence(endingType%)
 	EndingFadeActive = True
 	EndingFadeAlpha = 0.0
-	EndingTimer = 0.0
+	VFXEndingTimer = 0.0
 
 	Select endingType
 		Case 1  ; Whistleblower
@@ -484,15 +484,15 @@ Function StartEndingSequence(endingType%)
 End Function
 
 Function UpdateEndingFade()
-	EndingTimer = EndingTimer + FPSfactor
+	VFXEndingTimer = VFXEndingTimer + FPSfactor
 
 	; fade in (3 seconds)
-	If EndingTimer < 210.0 Then
-		EndingFadeAlpha = EndingTimer / 210.0
-	ElseIf EndingTimer < 490.0 Then
+	If VFXEndingTimer < 210.0 Then
+		EndingFadeAlpha = VFXEndingTimer / 210.0
+	ElseIf VFXEndingTimer < 490.0 Then
 		; hold
 		EndingFadeAlpha = 1.0
-	ElseIf EndingTimer < 700.0 Then
+	ElseIf VFXEndingTimer < 700.0 Then
 		; pokazyvaem tekst
 		EndingFadeAlpha = 1.0
 	Else
@@ -511,8 +511,8 @@ Function RenderEndingScreen()
 	Rect 0, 0, gw, gh, True
 
 	; tekst koncovki
-	If EndingTimer > 280.0 Then
-		Local textAlpha# = (EndingTimer - 280.0) / 140.0
+	If VFXEndingTimer > 280.0 Then
+		Local textAlpha# = (VFXEndingTimer - 280.0) / 140.0
 		If textAlpha > 1.0 Then textAlpha = 1.0
 
 		Local gray% = Int(textAlpha * 200)
@@ -523,8 +523,8 @@ Function RenderEndingScreen()
 		Text (gw - tw) / 2, gh / 2 - 40, EndingText
 
 		; podpis'
-		If EndingTimer > 420.0 Then
-			Local subAlpha# = (EndingTimer - 420.0) / 140.0
+		If VFXEndingTimer > 420.0 Then
+			Local subAlpha# = (VFXEndingTimer - 420.0) / 140.0
 			If subAlpha > 1.0 Then subAlpha = 1.0
 			gray = Int(subAlpha * 150)
 			Color gray, gray, gray
@@ -533,7 +533,7 @@ Function RenderEndingScreen()
 		EndIf
 
 		; session link
-		If EndingTimer > 560.0 Then
+		If VFXEndingTimer > 560.0 Then
 			Color 80, 80, 80
 			Local link$ = "claude.ai/code"
 			tw = StringWidth(link)
