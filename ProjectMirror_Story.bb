@@ -274,7 +274,7 @@ Global SceneDClass9341.SceneActor = Null
 Global IntroAnnouncementSFX% = 0
 Global LightsFlickerSFX% = 0
 Global IntercomSFX% = 0
-Global AlarmSFX% = 0
+Global MirrorAlarmSFX% = 0
 
 ; субтитры
 Global SubtitleText$ = ""
