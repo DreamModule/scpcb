@@ -1,150 +1,204 @@
-;===============================================================================
-; PROJECT MIRROR: CORE INTEGRATION MODULE
-; Blitz3D Master Controller for SCP: Containment Breach
-; "СТОРОЖ" - Project Mirror Main Controller
-;===============================================================================
-;
-; INTEGRATION GUIDE:
-; ==================
-; Add to Main.bb after other includes:
-;   Include "ProjectMirror_Core.bb"
-;
-; Call in initialization (after InitRooms, before main loop):
-;   InitProjectMirror()
-;
-; Call in main game loop (inside the Repeat block):
-;   UpdateProjectMirror()
-;
-; Call in render phase (after RenderWorld, before Flip):
-;   RenderProjectMirror()
-;
-; Call in cleanup/exit:
-;   CleanupProjectMirror()
-;
-; Call in save game:
-;   SaveProjectMirrorState(file%)
-;
-; Call in load game:
-;   LoadProjectMirrorState(file%)
-;
-;===============================================================================
+; Project Mirror - Core Integration
+; главный контроллер мода "СТОРОЖ"
+; Маркус = охранник, спавн в кафетерии, инвентарь: рация + ключ-карта Lvl 2
 
-;-------------------------------------------------------------------------------
-; INCLUDE ALL SUBSYSTEMS
-;-------------------------------------------------------------------------------
 Include "ProjectMirror_Story.bb"
 Include "ProjectMirror_Echo.bb"
 Include "ProjectMirror_939.bb"
 Include "ProjectMirror_914.bb"
 Include "ProjectMirror_MTF.bb"
 
-;-------------------------------------------------------------------------------
-; VERSION INFO
-;-------------------------------------------------------------------------------
 Const MIRROR_VERSION$ = "1.0.0"
 Const MIRROR_BUILD% = 20240115
 Const MIRROR_CODENAME$ = "STOROZH"
 
-;-------------------------------------------------------------------------------
-; MASTER GLOBALS
-;-------------------------------------------------------------------------------
 Global ProjectMirrorInitialized% = False
 Global ProjectMirrorEnabled% = True
 Global ProjectMirrorDebugMode% = False
 
-; Performance tracking
+; перфоманс метрики (для дебага)
 Global MirrorUpdateTime% = 0
 Global MirrorRenderTime% = 0
 Global MirrorFrameCount% = 0
 
-; Feature toggles
+; тоглы фич - можно отключать отдельные системы
 Global MirrorStoryEnabled% = True
 Global MirrorEchoEnabled% = True
 Global Mirror939Enabled% = True
 Global Mirror914SystemEnabled% = True
 Global MirrorMTFEnabled% = True
 
-;===============================================================================
-; MASTER INITIALIZATION
-;===============================================================================
+; спавн охранника
+Global MirrorSpawnRoom$ = "room2cafeteria"
+Global MirrorUseCustomSpawn% = True
+
 Function InitProjectMirror()
 	If ProjectMirrorInitialized Then Return
 
-	DebugLog "=== PROJECT MIRROR INITIALIZATION ==="
-	DebugLog "Version: " + MIRROR_VERSION + " (" + MIRROR_CODENAME + ")"
-	DebugLog "Build: " + MIRROR_BUILD
+	DebugLog "=== PROJECT MIRROR INIT ==="
+	DebugLog "v" + MIRROR_VERSION + " [" + MIRROR_CODENAME + "]"
 
-	; Initialize subsystems in dependency order
 	Local startTime% = MilliSecs()
 
-	; 1. Story System (no dependencies)
+	; 1. Story System - база всего
 	If MirrorStoryEnabled Then
-		DebugLog "Initializing Story System..."
+		DebugLog "Story system..."
 		InitStorySystem()
 	EndIf
 
-	; 2. Echo System (depends on Story)
+	; 2. Echo System - фантомы дня 3
 	If MirrorEchoEnabled Then
-		DebugLog "Initializing Echo System..."
+		DebugLog "Echo system..."
 		InitEchoSystem()
 	EndIf
 
-	; 3. SCP-939 Voice Mimicry (depends on Story)
+	; 3. 939 Voice Mimicry
 	If Mirror939Enabled Then
-		DebugLog "Initializing SCP-939 Voice Mimicry..."
+		DebugLog "939 mimicry..."
 		InitVoiceMimicrySystem()
 	EndIf
 
-	; 4. SCP-914 Modifications (depends on Story)
+	; 4. 914 Quest Logic
 	If Mirror914SystemEnabled Then
-		DebugLog "Initializing SCP-914 Quest System..."
+		DebugLog "914 quest..."
 		InitMirror914System()
 	EndIf
 
-	; 5. MTF Fox Tactics (depends on Story)
+	; 5. MTF Fox Tactics
 	If MirrorMTFEnabled Then
-		DebugLog "Initializing MTF Fox Tactics..."
+		DebugLog "MTF tactics..."
 		InitFoxTactics()
 	EndIf
 
+	; --- СПАВН ОХРАННИКА ---
+	; костыль: ищем комнату кафетерии и телепортим туда
+	If MirrorUseCustomSpawn And CurrentDay = 1 Then
+		SpawnGuardAtCafeteria()
+		GiveGuardEquipment()
+	EndIf
+
 	Local initTime% = MilliSecs() - startTime
-	DebugLog "Project Mirror initialized in " + initTime + "ms"
+	DebugLog "Mirror init: " + initTime + "ms"
 
 	ProjectMirrorInitialized = True
 End Function
 
-;===============================================================================
-; MASTER UPDATE (Call every frame in main loop)
-;===============================================================================
+; спавн в кафетерии - день 1, утро
+Function SpawnGuardAtCafeteria()
+	Local spawnRoom.Rooms = Null
+
+	For r.Rooms = Each Rooms
+		If r\RoomTemplate <> Null Then
+			If r\RoomTemplate\Name = MirrorSpawnRoom Then
+				spawnRoom = r
+				Exit
+			EndIf
+		EndIf
+	Next
+
+	If spawnRoom <> Null Then
+		; центр комнаты + немного вверх чтоб не застрять
+		Local spawnX# = EntityX(spawnRoom\obj)
+		Local spawnY# = 0.5
+		Local spawnZ# = EntityZ(spawnRoom\obj)
+
+		PositionEntity Collider, spawnX, spawnY, spawnZ
+		ResetEntity Collider
+
+		PlayerRoom = spawnRoom
+
+		DebugLog "Spawned guard at " + MirrorSpawnRoom
+	Else
+		DebugLog "WARNING: spawn room not found: " + MirrorSpawnRoom
+	EndIf
+End Function
+
+; экипировка охранника - рация и ключ-карта 2
+Function GiveGuardEquipment()
+	Local it.Items
+	Local slot% = 0
+
+	; ищем свободные слоты в инвентаре
+	For i% = 0 To 9
+		If Inventory(i) = Null Then
+			slot = i
+			Exit
+		EndIf
+	Next
+
+	; рация - основной инструмент охранника
+	it = CreateItem("Radio Transceiver", "radio", 1, 1, 1)
+	If it <> Null Then
+		it\Picked = True
+		it\Dropped = -1
+		If it\itemtemplate <> Null Then it\itemtemplate\found = True
+		Inventory(slot) = it
+		HideEntity it\collider
+		EntityType it\collider, HIT_ITEM
+		EntityParent it\collider, 0
+		ItemAmount = ItemAmount + 1
+		slot = slot + 1
+		DebugLog "Gave radio"
+	EndIf
+
+	; ключ-карта уровня 2 - стандарт для охранника
+	For i% = slot To 9
+		If Inventory(i) = Null Then
+			slot = i
+			Exit
+		EndIf
+	Next
+
+	it = CreateItem("Level 2 Key Card", "key2", 1, 1, 1)
+	If it <> Null Then
+		it\Picked = True
+		it\Dropped = -1
+		If it\itemtemplate <> Null Then it\itemtemplate\found = True
+		Inventory(slot) = it
+		HideEntity it\collider
+		EntityType it\collider, HIT_ITEM
+		EntityParent it\collider, 0
+		ItemAmount = ItemAmount + 1
+		DebugLog "Gave keycard lvl 2"
+	EndIf
+
+	; полная стамина и здоровье
+	Stamina = 100.0
+	; Injuries = 0.0  ; если есть такая переменная
+	; Bloodloss = 0.0
+
+	DebugLog "Guard equipment ready"
+End Function
+
 Function UpdateProjectMirror()
 	If Not ProjectMirrorInitialized Then Return
 	If Not ProjectMirrorEnabled Then Return
 
 	Local startTime% = MilliSecs()
 
-	; Update Story System
+	; апдейт сюжета
 	If MirrorStoryEnabled Then
-		; Update day transitions
 		UpdateDayTransition()
-
-		; Update active dialogs
 		UpdateDialog()
 
-		; Track play time
+		; трек игрового времени
 		If GStoryState <> Null Then
 			GStoryState\playTime = GStoryState\playTime + FPSfactor / 70.0
 		EndIf
+
+		; чек триггеров диалогов в текущей комнате
+		If PlayerRoom <> Null Then
+			CheckDialogTriggers(PlayerRoom)
+		EndIf
 	EndIf
 
-	; Update Echo System (Day 3 only - handled internally)
+	; эхо система (день 3)
 	If MirrorEchoEnabled Then
 		UpdateEchoEvents()
 	EndIf
 
-	; Update SCP-939 Voice Mimicry
+	; 939 - перебираем всех NPC
 	If Mirror939Enabled Then
-		; This is called per-NPC from UpdateNPCs
-		; But we can do global state checks here
 		For n.NPCs = Each NPCs
 			If n\NPCtype = NPCtype939 Then
 				Integrate939VoiceMimicry(n)
@@ -152,7 +206,7 @@ Function UpdateProjectMirror()
 		Next
 	EndIf
 
-	; Update MTF Fox Tactics
+	; MTF тактика
 	If MirrorMTFEnabled Then
 		UpdateFoxTactics()
 	EndIf
@@ -161,37 +215,34 @@ Function UpdateProjectMirror()
 	MirrorFrameCount = MirrorFrameCount + 1
 End Function
 
-;===============================================================================
-; MASTER RENDER (Call after RenderWorld)
-;===============================================================================
 Function RenderProjectMirror()
 	If Not ProjectMirrorInitialized Then Return
 	If Not ProjectMirrorEnabled Then Return
 
 	Local startTime% = MilliSecs()
 
-	; Render day transition overlay
+	; оверлей перехода дня
 	If MirrorStoryEnabled Then
 		RenderDayTransition()
 		RenderDialog()
 	EndIf
 
-	; Render echo distortion effects
+	; эффекты эха
 	If MirrorEchoEnabled Then
 		RenderEchoDistortion()
 	EndIf
 
-	; Render 914 status messages
+	; статус 914
 	If Mirror914SystemEnabled Then
 		Render914Status()
 	EndIf
 
-	; Render flashbang effects
+	; флешбенг эффект
 	If MirrorMTFEnabled Then
 		RenderFlashbangEffect()
 	EndIf
 
-	; Debug overlay
+	; дебаг оверлей
 	If ProjectMirrorDebugMode Then
 		RenderMirrorDebug()
 	EndIf
@@ -199,119 +250,66 @@ Function RenderProjectMirror()
 	MirrorRenderTime = MilliSecs() - startTime
 End Function
 
-;===============================================================================
-; MASTER CLEANUP
-;===============================================================================
 Function CleanupProjectMirror()
 	If Not ProjectMirrorInitialized Then Return
 
-	DebugLog "=== PROJECT MIRROR CLEANUP ==="
+	DebugLog "=== MIRROR CLEANUP ==="
 
-	; Cleanup in reverse order
-	If MirrorMTFEnabled Then
-		CleanupFoxTactics()
-	EndIf
-
-	If Mirror914SystemEnabled Then
-		Cleanup914System()
-	EndIf
-
-	If Mirror939Enabled Then
-		CleanupVoiceMimicrySystem()
-	EndIf
-
-	If MirrorEchoEnabled Then
-		CleanupEchoSystem()
-	EndIf
-
-	If MirrorStoryEnabled Then
-		CleanupStorySystem()
-	EndIf
+	If MirrorMTFEnabled Then CleanupFoxTactics()
+	If Mirror914SystemEnabled Then Cleanup914System()
+	If Mirror939Enabled Then CleanupVoiceMimicrySystem()
+	If MirrorEchoEnabled Then CleanupEchoSystem()
+	If MirrorStoryEnabled Then CleanupStorySystem()
 
 	ProjectMirrorInitialized = False
-	DebugLog "Project Mirror cleanup complete"
+	DebugLog "Cleanup done"
 End Function
 
-;===============================================================================
-; SAVE/LOAD INTEGRATION
-;===============================================================================
 Function SaveProjectMirrorState(file%)
 	If Not ProjectMirrorInitialized Then Return
 
-	; Write header
 	WriteInt file, MIRROR_BUILD
 	WriteInt file, ProjectMirrorEnabled
 
-	; Save subsystem states
-	If MirrorStoryEnabled Then
-		SaveStoryState(file)
-	EndIf
-
-	If Mirror939Enabled Then
-		SaveVoiceMimicryState(file)
-	EndIf
-
-	If Mirror914SystemEnabled Then
-		Save914State(file)
-	EndIf
-
-	If MirrorMTFEnabled Then
-		SaveFoxTacticsState(file)
-	EndIf
+	If MirrorStoryEnabled Then SaveStoryState(file)
+	If Mirror939Enabled Then SaveVoiceMimicryState(file)
+	If Mirror914SystemEnabled Then Save914State(file)
+	If MirrorMTFEnabled Then SaveFoxTacticsState(file)
 End Function
 
 Function LoadProjectMirrorState(file%)
-	; Read and validate header
 	Local savedBuild% = ReadInt(file)
 	If savedBuild < 20240101 Then
-		DebugLog "WARNING: Save file from older Project Mirror build"
+		DebugLog "WARNING: old save format"
 	EndIf
 
 	ProjectMirrorEnabled = ReadInt(file)
 
-	; Ensure systems are initialized
 	If Not ProjectMirrorInitialized Then
 		InitProjectMirror()
 	EndIf
 
-	; Load subsystem states
-	If MirrorStoryEnabled Then
-		LoadStoryState(file)
-	EndIf
-
-	If Mirror939Enabled Then
-		LoadVoiceMimicryState(file)
-	EndIf
-
-	If Mirror914SystemEnabled Then
-		Load914State(file)
-	EndIf
-
-	If MirrorMTFEnabled Then
-		LoadFoxTacticsState(file)
-	EndIf
+	If MirrorStoryEnabled Then LoadStoryState(file)
+	If Mirror939Enabled Then LoadVoiceMimicryState(file)
+	If Mirror914SystemEnabled Then Load914State(file)
+	If MirrorMTFEnabled Then LoadFoxTacticsState(file)
 End Function
 
-;===============================================================================
-; EVENT HOOKS (Call from appropriate places in original code)
-;===============================================================================
+; --- EVENT HOOKS ---
+; вызываются из оригинального кода
 
-; Call when a dialog/voice line is played
 Function OnMirrorDialogPlayed(soundPath$, speakerName$, room.Rooms)
 	If Not ProjectMirrorInitialized Then Return
 
-	; Record for Echo system
 	If MirrorStoryEnabled And MirrorEchoEnabled Then
 		RecordDialogEvent(room, speakerName, soundPath)
 	EndIf
 
-	; Let 939 learn the voice
 	If Mirror939Enabled Then
 		OnDialogPlayed(soundPath, speakerName, room)
 	EndIf
 End Function
 
-; Call when player picks up an item
 Function OnMirrorItemPickup(item.Items)
 	If Not ProjectMirrorInitialized Then Return
 
@@ -320,7 +318,6 @@ Function OnMirrorItemPickup(item.Items)
 	EndIf
 End Function
 
-; Call before Use914() in original code - returns True if handled
 Function OnMirror914Use%(item.Items, setting$, x#, y#, z#)
 	If Not ProjectMirrorInitialized Then Return False
 	If Not Mirror914SystemEnabled Then Return False
@@ -328,12 +325,10 @@ Function OnMirror914Use%(item.Items, setting$, x#, y#, z#)
 	Return Use914Mirror(item, setting, x, y, z)
 End Function
 
-; Call when player enters a new room
 Function OnMirrorRoomEnter(room.Rooms)
 	If Not ProjectMirrorInitialized Then Return
 	If room = Null Then Return
 
-	; Clear 914 status when leaving 914 room
 	If Mirror914SystemEnabled Then
 		If room\RoomTemplate <> Null Then
 			If Instr(Lower(room\RoomTemplate\Name), "914") = 0 Then
@@ -342,28 +337,27 @@ Function OnMirrorRoomEnter(room.Rooms)
 		EndIf
 	EndIf
 
-	; Reset intake tracking
 	ResetIntakeTracking()
+
+	; чек триггеров
+	If MirrorStoryEnabled Then
+		CheckDialogTriggers(room)
+	EndIf
 End Function
 
-; Call when an NPC is created
 Function OnMirrorNPCCreated(n.NPCs)
 	If Not ProjectMirrorInitialized Then Return
 	If n = Null Then Return
 
-	; Create voice state for SCP-939
 	If Mirror939Enabled And n\NPCtype = NPCtype939 Then
 		CreateVoiceState(n)
 	EndIf
 
-	; Add MTF to Fox squad
 	If MirrorMTFEnabled And n\NPCtype = NPCtypeMTF Then
-		; Auto-create squad if needed
 		If ActiveFoxSquad = Null Then
 			ActiveFoxSquad = CreateFoxSquad()
 		EndIf
 
-		; Assign role based on squad size
 		Local role% = FOX_ROLE_POINTMAN
 		If ActiveFoxSquad\memberCount = 0 Then
 			role = FOX_ROLE_LEADER
@@ -381,7 +375,6 @@ Function OnMirrorNPCCreated(n.NPCs)
 	EndIf
 End Function
 
-; Call when player meets Steve
 Function OnMirrorSteveMet()
 	If Not ProjectMirrorInitialized Then Return
 
@@ -392,14 +385,12 @@ Function OnMirrorSteveMet()
 	EndIf
 End Function
 
-; Call when Steve dies
 Function OnMirrorSteveDead()
 	If Not ProjectMirrorInitialized Then Return
 
 	SetStoryFlag(FLAG_STEVE_DEAD, 1)
-	ModifyKarma(-15)  ; Significant karma loss
+	ModifyKarma(-15)
 
-	; Make 939 prefer Steve's voice
 	If Mirror939Enabled Then
 		For state.SCP939VoiceState = Each SCP939VoiceState
 			state\preferredCategory = VOICE_CAT_STEVE
@@ -408,45 +399,27 @@ Function OnMirrorSteveDead()
 	EndIf
 End Function
 
-; Call when Steve is saved
 Function OnMirrorSteveSaved()
 	If Not ProjectMirrorInitialized Then Return
 
 	SetStoryFlag(FLAG_STEVE_SAVED, 1)
-	ModifyKarma(20)  ; Significant karma gain
+	ModifyKarma(20)
 End Function
 
-;===============================================================================
-; DEBUG RENDERING
-;===============================================================================
+; --- DEBUG ---
+
 Function RenderMirrorDebug()
 	Color 255, 255, 255
-	Text 10, 500, "=== PROJECT MIRROR v" + MIRROR_VERSION + " ==="
+	Text 10, 500, "=== MIRROR v" + MIRROR_VERSION + " ==="
 	Text 10, 515, "Update: " + MirrorUpdateTime + "ms  Render: " + MirrorRenderTime + "ms"
 	Text 10, 530, "Frame: " + MirrorFrameCount
 
-	; Subsystem debug toggles (press keys in debug mode)
-	If KeyHit(2) Then ; Key 1 - Story debug
-		DebugStoryState()
-	EndIf
+	If KeyHit(2) Then DebugStoryState()
+	If KeyHit(3) Then DebugEchoSystem()
+	If KeyHit(4) Then DebugVoiceMimicry()
+	If KeyHit(5) Then Debug914System()
+	If KeyHit(6) Then DebugFoxTactics()
 
-	If KeyHit(3) Then ; Key 2 - Echo debug
-		DebugEchoSystem()
-	EndIf
-
-	If KeyHit(4) Then ; Key 3 - 939 debug
-		DebugVoiceMimicry()
-	EndIf
-
-	If KeyHit(5) Then ; Key 4 - 914 debug
-		Debug914System()
-	EndIf
-
-	If KeyHit(6) Then ; Key 5 - MTF debug
-		DebugFoxTactics()
-	EndIf
-
-	; Always show current state
 	Color 200, 200, 0
 	Text 10, 550, "Day: " + CurrentDay + "  Karma: " + CurrentKarma + "  Branch: " + GetBranchName(StoryBranch)
 
@@ -456,6 +429,7 @@ Function RenderMirrorDebug()
 	If GetStoryFlag(FLAG_STEVE_SAVED) Then flagsStr = flagsStr + "SS "
 	If GetStoryFlag(FLAG_HARRISON_PDA) Then flagsStr = flagsStr + "HP "
 	If GetStoryFlag(FLAG_O5_CARD_OBTAINED) Then flagsStr = flagsStr + "O5 "
+	If GetStoryFlag(FLAG_BREACH_STARTED) Then flagsStr = flagsStr + "BREACH "
 
 	Text 10, 565, "Flags: " + flagsStr
 End Function
@@ -464,9 +438,8 @@ Function ToggleMirrorDebug()
 	ProjectMirrorDebugMode = Not ProjectMirrorDebugMode
 End Function
 
-;===============================================================================
-; UTILITY FUNCTIONS
-;===============================================================================
+; --- UTILITY ---
+
 Function GetMirrorVersion$()
 	Return MIRROR_VERSION
 End Function
@@ -498,13 +471,11 @@ Function SetMirrorFeature(feature$, enabled%)
 	End Select
 End Function
 
-;===============================================================================
-; CONSOLE COMMANDS (If console system exists)
-;===============================================================================
+; --- CONSOLE COMMANDS ---
+
 Function ProcessMirrorCommand%(cmd$)
 	Local parts$ = Lower(Trim$(cmd))
 
-	; mirror_day <1-3>
 	If Left$(parts, 10) = "mirror_day" Then
 		Local dayStr$ = Trim$(Mid$(parts, 11))
 		Local newDay% = Int(dayStr)
@@ -514,14 +485,12 @@ Function ProcessMirrorCommand%(cmd$)
 		EndIf
 	EndIf
 
-	; mirror_karma <amount>
 	If Left$(parts, 12) = "mirror_karma" Then
 		Local karmaStr$ = Trim$(Mid$(parts, 13))
 		ModifyKarma(Int(karmaStr))
 		Return True
 	EndIf
 
-	; mirror_flag <index> <value>
 	If Left$(parts, 11) = "mirror_flag" Then
 		Local flagParts$ = Trim$(Mid$(parts, 12))
 		Local spacePos% = Instr(flagParts, " ")
@@ -533,70 +502,31 @@ Function ProcessMirrorCommand%(cmd$)
 		EndIf
 	EndIf
 
-	; mirror_debug
 	If parts = "mirror_debug" Then
 		ToggleMirrorDebug()
 		Return True
 	EndIf
 
-	; mirror_echo <id>
 	If Left$(parts, 11) = "mirror_echo" Then
 		Local echoId% = Int(Trim$(Mid$(parts, 12)))
 		TriggerEchoByID(echoId)
 		Return True
 	EndIf
 
-	; mirror_flash
 	If parts = "mirror_flash" Then
 		TriggerFlashbangEffect(1.0)
+		Return True
+	EndIf
+
+	If parts = "mirror_breach" Then
+		TriggerBreachSequence()
 		Return True
 	EndIf
 
 	Return False
 End Function
 
-;===============================================================================
-; SAMPLE DIALOG SETUP (Call from game-specific initialization)
-;===============================================================================
-Function SetupSampleDialogs()
-	Local node.DialogNode
-	Local opt.DialogOption
-
-	; Steve's first meeting - Day 1
-	node = CreateDialogNode(100, "Steve", "Hey! You're D-9341, right? I'm Steve. We need to get out of here. Those things... they killed everyone in my block.", "GFX\Portraits\steve.png", "SFX\Character\Steve\Greeting.ogg")
-
-	opt = AddDialogOption(node, "We should stick together. Safety in numbers.", 101, 5, FLAG_STEVE_MET, 1)
-	opt = AddDialogOption(node, "I work alone. Good luck.", 102, -10, -1, 0)
-	opt = AddDialogOption(node, "What do you know about this place?", 103, 0, -1, 0)
-
-	; Steve responds positively
-	node = CreateDialogNode(101, "Steve", "Good thinking. I saw a map earlier - there's an exit through Heavy Containment. But we'll need keycards.", "", "SFX\Character\Steve\Plan.ogg")
-	AddDialogOption(node, "Let's find those cards then.", -1, 3, -1, 0)
-
-	; Steve responds to rejection
-	node = CreateDialogNode(102, "Steve", "Fine... but if you change your mind, I'll try to make it to Gate B. Maybe we'll meet again.", "", "SFX\Character\Steve\Fear1.ogg")
-	AddDialogOption(node, "[Leave]", -1, 0, -1, 0)
-
-	; Steve info dump
-	node = CreateDialogNode(103, "Steve", "This is Site-19. SCP Foundation. They contain... things. Monsters. And now they're all loose.", "", "SFX\Character\Steve\Warning.ogg")
-	AddDialogOption(node, "SCPs?", 104, 0, -1, 0)
-	AddDialogOption(node, "Doesn't matter. We need to move.", 101, 0, -1, 0)
-
-	node = CreateDialogNode(104, "Steve", "Secure. Contain. Protect. That's their motto. Ironic, huh? Look, there's no time. Are you with me or not?", "", "")
-	AddDialogOption(node, "I'm with you.", 101, 5, FLAG_STEVE_MET, 1)
-	AddDialogOption(node, "I'll take my chances alone.", 102, -5, -1, 0)
-End Function
-
-;===============================================================================
-; MTF SPAWN INTEGRATION EXAMPLE
-;===============================================================================
 Function SetupMTFFoxSquad()
-	; Create a Fox squad for Day 3 finale
 	Local squad.MTFFoxSquad = CreateFoxSquad()
-
-	; This would be called when MTF spawn event triggers
-	; The actual MTF NPCs will be added via OnMirrorNPCCreated
-	; when CreateNPC is called for MTF type
-
 	ActiveFoxSquad = squad
 End Function
