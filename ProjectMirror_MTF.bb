@@ -185,7 +185,7 @@ End Function
 
 Function UpdateFoxTactics()
 	If Not FoxTacticsEnabled Then Return
-	If CurrentDay < 3 And Not GetStoryFlag(FLAG_FINALE_TRIGGERED) Then Return
+	If CurrentDay < 3 And (Not GetStoryFlag(FLAG_FINALE_TRIGGERED)) Then Return
 
 	For squad.MTFFoxSquad = Each MTFFoxSquad
 		UpdateFoxSquad(squad)
@@ -225,7 +225,7 @@ Function UpdateFoxSquad(squad.MTFFoxSquad)
 		squad\alertLevel = Max(squad\alertLevel - 1, 0)
 	EndIf
 
-	If squad\alertLevel >= 50 And Not squad\engagementActive Then
+	If squad\alertLevel >= 50 And (Not squad\engagementActive) Then
 		InitiateEngagement(squad)
 	EndIf
 
@@ -262,7 +262,7 @@ Function UpdateFoxMember(fox.MTFFoxState)
 			If fox\hasLOS Then
 				fox\tacticalState = FOX_STATE_ALERT
 				fox\stateTimer = 0.0
-				If fox\squad <> Null And Not fox\signalSent Then
+				If fox\squad <> Null And (Not fox\signalSent) Then
 					SignalSquad(fox\squad, fox)
 					fox\signalSent = True
 				EndIf
@@ -465,14 +465,14 @@ Function InitiateEngagement(squad.MTFFoxSquad)
 		If fox\role = FOX_ROLE_FLANKER_R Then flankerRAssigned = True
 	Next
 
-	If Not flankerLAssigned Or Not flankerRAssigned Then
+	If (Not flankerLAssigned) Or (Not flankerRAssigned) Then
 		Local assigned% = 0
 		For i% = 0 To squad\memberCount - 1
 			Local fox.MTFFoxState = squad\members[i]
 			If fox = Null Then Continue
 			If fox = squad\leader Then Continue
 
-			If Not flankerLAssigned And assigned = 0 Then
+			If (Not flankerLAssigned) And assigned = 0 Then
 				fox\role = FOX_ROLE_FLANKER_L
 				flankerLAssigned = True
 				assigned = assigned + 1

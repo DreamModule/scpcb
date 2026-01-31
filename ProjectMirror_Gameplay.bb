@@ -401,7 +401,7 @@ Function InsertNukeKey(keyNum%)
 End Function
 
 Function ArmNuke()
-	If Not NukeFirstKeyInserted Or Not NukeSecondKeyInserted Then
+	If (Not NukeFirstKeyInserted) Or (Not NukeSecondKeyInserted) Then
 		AddNotification("Trebuetsya dva klyucha avtorizatsii")
 		Return
 	EndIf
@@ -520,7 +520,7 @@ Function UpdateMTFBehavior()
 	If CurrentAct < ACT_SURFACE Then Return
 
 	; proverka betrayal
-	If GetStoryFlag(FLAG_ACT6_MTF_BETRAYAL) And Not MTFBetrayalTriggered Then
+	If GetStoryFlag(FLAG_ACT6_MTF_BETRAYAL) And (Not MTFBetrayalTriggered) Then
 		TriggerMTFBetrayal()
 	EndIf
 

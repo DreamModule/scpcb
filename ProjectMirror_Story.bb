@@ -1658,7 +1658,7 @@ Function TriggerDay2Finale()
 End Function
 
 Function OnDay2Complete()
-	If GetStoryFlag(FLAG_DAY2_COMPLETE) And Not DialogActive Then
+	If GetStoryFlag(FLAG_DAY2_COMPLETE) And (Not DialogActive) Then
 		TriggerDayTransition(3)
 	EndIf
 End Function
@@ -2537,7 +2537,7 @@ Function UpdateDay3Logic()
 	Update939VoiceTrap()
 
 	; echo pri tele Stiva
-	If GetStoryFlag(FLAG_FOUND_STEVE_BODY) And Not GetStoryFlag(FLAG_SAW_ECHO_STEVE) Then
+	If GetStoryFlag(FLAG_FOUND_STEVE_BODY) And (Not GetStoryFlag(FLAG_SAW_ECHO_STEVE)) Then
 		TriggerEchoAtSteveBody()
 	EndIf
 
@@ -2552,7 +2552,7 @@ Function UpdateSanityTriggers()
 	; dobavlyaem sanity pri opredelennykh sobytiyakh
 
 	; videt' trup - +5 sanity
-	If GetStoryFlag(FLAG_FOUND_STEVE_BODY) And Not GetStoryFlag(FLAG_SAW_173_AFTERMATH) Then
+	If GetStoryFlag(FLAG_FOUND_STEVE_BODY) And (Not GetStoryFlag(FLAG_SAW_173_AFTERMATH)) Then
 		ModifySanity(15)
 		SetStoryFlag(FLAG_SAW_173_AFTERMATH, 1)
 	EndIf

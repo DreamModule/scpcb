@@ -297,7 +297,7 @@ Function UpdateSCP939VoiceMimicry(n.NPCs)
 				ChannelVolume state\currentSoundChannel, newVolume
 			EndIf
 
-			If state\currentSoundChannel = 0 Or Not ChannelPlaying(state\currentSoundChannel) Then
+			If state\currentSoundChannel = 0 Or (Not ChannelPlaying(state\currentSoundChannel)) Then
 				If state\currentSound <> 0 Then
 					FreeSound state\currentSound
 					state\currentSound = 0

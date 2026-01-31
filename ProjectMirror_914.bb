@@ -257,7 +257,7 @@ Function ProcessConditionalVanilla%(item.Items, settingNum%, x#, y#, z#)
 	EndIf
 
 	If tempName = "key4" And settingNum = REFINE_VERY_FINE Then
-		If Not HasHarrisonEye And Not HarrisonEyeInIntake Then
+		If (Not HasHarrisonEye) And (Not HarrisonEyeInIntake) Then
 			RemoveItem(item)
 			Local d.Decals = CreateDecal(0, x, 8 * RoomScale + 0.005, z, 90, Rand(360), 0)
 			If d <> Null Then

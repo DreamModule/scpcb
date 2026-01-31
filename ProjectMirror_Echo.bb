@@ -493,8 +493,8 @@ Function UpdateActiveEchoes()
 					echo\stateTimer = 0.0
 				EndIf
 
-				If echo\soundChannel <> 0 And Not e\soundLoop Then
-					If Not ChannelPlaying(echo\soundChannel) Then
+				If echo\soundChannel <> 0 And (Not e\soundLoop) Then
+					If (Not ChannelPlaying(echo\soundChannel)) Then
 						If echo\stateTimer > e\activeDuration * 0.5 Then
 							echo\state = ECHO_STATE_FADING
 							echo\stateTimer = 0.0
