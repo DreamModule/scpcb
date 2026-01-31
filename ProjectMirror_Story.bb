@@ -64,7 +64,7 @@ Const FLAG_SAW_HARRISON_TERMINAL% = 33
 Const FLAG_079_INTEGRATION% = 34
 Const FLAG_DAY2_COMPLETE% = 35
 
-; Day 3 флаги - "Catastrophe"
+; Day 3 флаги - "Catastrophe" (7 актов)
 Const FLAG_DAY3_STARTED% = 36
 Const FLAG_FOUND_STEVE_BODY% = 37
 Const FLAG_FOUND_HARRISON_BODY% = 38
@@ -75,6 +75,68 @@ Const FLAG_SAW_ECHO_STEVE% = 42
 Const FLAG_EMERGENCY_LIGHTING% = 43
 Const FLAG_SAW_173_AFTERMATH% = 44
 Const FLAG_DORMS_VISITED% = 45
+
+; ACT 1: Пробуждение
+Const FLAG_ACT1_PHANTOM_STEVE% = 46
+Const FLAG_ACT1_RADIO_LOOP% = 47
+Const FLAG_ACT1_TOOK_CIGARETTES% = 48
+
+; ACT 2: Эхо прошлого
+Const FLAG_ACT2_CAFETERIA_VISION% = 49
+Const FLAG_ACT2_FLASHBACK_173% = 50
+Const FLAG_ACT2_FOUND_DICTAPHONE% = 51
+Const FLAG_ACT2_HEARD_STEVE_LAST% = 52
+
+; ACT 3: Голоса друзей (939)
+Const FLAG_ACT3_ENTERED_939_ZONE% = 53
+Const FLAG_ACT3_939_CHASE% = 54
+Const FLAG_ACT3_TOOK_HARRISON_EYE% = 55
+Const FLAG_ACT3_READ_MIRROR_LOG% = 56
+
+; ACT 4: Машина и Чума (914/049)
+Const FLAG_ACT4_079_CONTACT% = 57
+Const FLAG_ACT4_049_ENCOUNTER% = 58
+Const FLAG_ACT4_UPGRADED_CARD% = 59
+Const FLAG_ACT4_ZOMBIE_SIEGE% = 60
+
+; ACT 5: Смотри в пол (096)
+Const FLAG_ACT5_096_CORRIDOR% = 61
+Const FLAG_ACT5_079_TROLLED% = 62
+Const FLAG_ACT5_ELEVATOR_ESCAPE% = 63
+
+; ACT 6: Поверхность
+Const FLAG_ACT6_REACHED_SURFACE% = 64
+Const FLAG_ACT6_MTF_BETRAYAL% = 65
+
+; ACT 7: Финал / Концовки
+Const FLAG_ENDING_WHISTLEBLOWER% = 66
+Const FLAG_ENDING_SYMBIOSIS% = 67
+Const FLAG_ENDING_DEATH% = 68
+Const FLAG_ENDING_ZERO_PROTOCOL% = 69
+Const FLAG_NUKE_ACTIVATED% = 70
+Const FLAG_USED_STEVE_BADGE% = 71
+
+; Sanity system
+Const SANITY_MAX% = 100
+Const SANITY_ANXIETY% = 30
+Const SANITY_PARANOIA% = 70
+Const SANITY_HYSTERIA% = 100
+
+Global PlayerSanity% = 0
+Global SanityEffectTimer# = 0.0
+Global SanityHallucinationActive% = False
+Global SanityPhantomVisible% = False
+
+; Day 3 Act tracking
+Const ACT_AWAKENING% = 1
+Const ACT_ECHO% = 2
+Const ACT_VOICES% = 3
+Const ACT_MACHINE% = 4
+Const ACT_FLOOR% = 5
+Const ACT_SURFACE% = 6
+Const ACT_FINALE% = 7
+
+Global CurrentAct% = 0
 
 Global DayTransitionPending% = False
 Global DayTransitionTimer# = 0.0
@@ -1068,11 +1130,16 @@ Function DebugStoryState()
 	If GetStoryFlag(FLAG_079_INTEGRATION) Then Text 10, flagY, "079 Integration" : flagY = flagY + 12
 	; Day 3 flags
 	If GetStoryFlag(FLAG_DAY3_STARTED) Then Text 10, flagY, "Day3 Started" : flagY = flagY + 12
+	If CurrentDay = 3 Then
+		Text 10, flagY, "ACT: " + GetActName(CurrentAct) : flagY = flagY + 12
+		Text 10, flagY, "Sanity: " + PlayerSanity + "%" : flagY = flagY + 12
+	EndIf
 	If GetStoryFlag(FLAG_FOUND_STEVE_BODY) Then Text 10, flagY, "Found Steve" : flagY = flagY + 12
 	If GetStoryFlag(FLAG_FOUND_HARRISON_BODY) Then Text 10, flagY, "Found Harrison" : flagY = flagY + 12
 	If GetStoryFlag(FLAG_COLLECTED_HARRISON_PDA) Then Text 10, flagY, "Got PDA" : flagY = flagY + 12
 	If GetStoryFlag(FLAG_HEARD_939_MIMIC) Then Text 10, flagY, "939 Mimic" : flagY = flagY + 12
-	If GetStoryFlag(FLAG_SAW_ECHO_STEVE) Then Text 10, flagY, "Echo Steve" : flagY = flagY + 12
+	If GetStoryFlag(FLAG_ACT4_UPGRADED_CARD) Then Text 10, flagY, "O5 Card" : flagY = flagY + 12
+	If GetStoryFlag(FLAG_ACT6_MTF_BETRAYAL) Then Text 10, flagY, "MTF Betrayal" : flagY = flagY + 12
 End Function
 
 Function GetBranchName$(branch%)
@@ -1699,82 +1766,383 @@ Function SetupDay3Dialogs()
 	Local node.DialogNode
 	Local opt.DialogOption
 
-	; --- ПРОБУЖДЕНИЕ: ТРЕВОГА ---
-	; ID 200-209
+	; ============================================================================
+	; ACT 1: ПРОБУЖДЕНИЕ В МОГИЛЕ (IDs 200-209)
+	; ============================================================================
 
 	node = CreateDialogNode(200, "[TREVOGA]", "VNIMANIE. MASSOVYI PRORYV SODERZHANIYA. VES' PERSONAL - SLEDOVAT' AVARIINYM PROTOKOLAM.", "", "")
 	node\autoAdvanceTime = 175.0
 
-	node = CreateDialogNode(201, "[...]", "*krasnoe avariynoe osveshchenie. sireny.*", "", "")
+	node = CreateDialogNode(201, "[...]", "*krasnoe avariynoe osveshchenie. sireny. golova raskalyvaetsya.*", "", "")
 	node\autoAdvanceTime = 105.0
 
-	node = CreateDialogNode(202, "Markus", "*dumaet* Chto... Chto proizoshlo? Gde ya? ...dormy. Nado vybrat'sya otsyuda.", "", "")
-	AddDialogOption(node, "[Vstat' s krovatri]", -1, 0, FLAG_DORMS_VISITED, 1)
+	node = CreateDialogNode(202, "Markus", "*dumaet* Chto... Chto proizoshlo? Pochemu ya v dormah? Posledneye, chto pomnyu - vypivka so Stivom...", "", "")
+	AddDialogOption(node, "[Poprobovat' vstat']", 203, 0, -1, 0)
 
-	; --- ТРУП СТИВА У 173 ---
-	; ID 210-219
-
-	node = CreateDialogNode(210, "Markus", "Chyort... Steve... Oni vsyo-taki otkryli yeyo.", "", "")
-	node\autoAdvanceTime = 140.0
-
-	node = CreateDialogNode(211, "Markus", "*naklonyaetsya k telu* Sheya... slomana. 173-i. Ty zhe govoril - 'proneslo'...", "", "")
-	opt = AddDialogOption(node, "*zakryt' emu glaza*", 212, 5, FLAG_FOUND_STEVE_BODY, 1)
-	opt = AddDialogOption(node, "*uyti*", -1, -2, FLAG_FOUND_STEVE_BODY, 1)
-
-	node = CreateDialogNode(212, "Markus", "Prosti, drug. Ya dolzhen byl byt' zdes'. Ya...", "", "")
-	node\autoAdvanceTime = 140.0
-
-	node = CreateDialogNode(213, "[...]", "*za spinoy - shumok. Ili pokazalos'?*", "", "")
+	; fantom Stiva
+	node = CreateDialogNode(203, "[...]", "*smotrite na koiku Stiva. Na mgnoveniye vidite yego - on zavyazyvayet shnurki*", "", "")
 	node\autoAdvanceTime = 70.0
 
-	; --- ГОЛОС СТИВА (939 ЛОВУШКА) ---
-	; ID 220-229
-
-	node = CreateDialogNode(220, "[???]", "*golos Stiva, iz koridora* ...Markus? Ty... zhiv? Idi... syuda...", "", "")
-	opt = AddDialogOption(node, "Steve?! Ty zhiv?!", 221, 0, FLAG_HEARD_939_MIMIC, 1)
-	opt = AddDialogOption(node, "*molchat' i slushchut'*", 222, 2, FLAG_HEARD_939_MIMIC, 1)
-	opt = AddDialogOption(node, "Eto ne Steve. Steve myortv.", 223, 3, FLAG_HEARD_939_MIMIC, 1)
-
-	node = CreateDialogNode(221, "[???]", "*golos priblizhaetsya* Da... pomoqgi mne... ya... ranyen...", "", "")
+	node = CreateDialogNode(204, "Phantom-Steve", "Shevelis', Markus! Yaitsegolovy zhdat' ne budut. Segodnya 173-go chistim.", "", "")
 	node\autoAdvanceTime = 105.0
 
-	node = CreateDialogNode(222, "Markus", "*dumaet* Etot golos... chto-to ne tak. Steve lezhal tam s slomqannoi sheey.", "", "")
-	node\autoAdvanceTime = 105.0
+	node = CreateDialogNode(205, "[...]", "*morgayete. Koika pusta, no ideal'no zapravlena. Na tumbochke - pachka sigaret Stiva.*", "", "")
+	opt = AddDialogOption(node, "[Vzyat' sigarety]", 206, 0, FLAG_ACT1_TOOK_CIGARETTES, 1)
+	opt = AddDialogOption(node, "[Ostavit']", 207, 0, FLAG_ACT1_PHANTOM_STEVE, 1)
 
-	node = CreateDialogNode(223, "Markus", "*krichit v koridor* Kto by ty ni byl - ya znayu, chto ty ne Steve!", "", "")
-	node\autoAdvanceTime = 105.0
+	node = CreateDialogNode(206, "Markus", "*beryot pachku* Ty mne dolzhen pivo, Steve... *pauza* Gde ty?", "", "")
+	AddDialogOption(node, "[Proverit' ratsiyu]", 208, 0, FLAG_ACT1_PHANTOM_STEVE, 1)
 
-	node = CreateDialogNode(224, "[...]", "*tishina. Potom - tikhii ryk iz temnoty. Shagi udalyayutsya.*", "", "")
+	node = CreateDialogNode(207, "Markus", "Nado nayti Stiva. Chto-to ne tak.", "", "")
+	AddDialogOption(node, "[Proverit' ratsiyu]", 208, 0, -1, 0)
+
+	; zatsiklennaya ratsiya
+	node = CreateDialogNode(208, "[RATSIYA]", "*belyi shum* ...kod krasnyi... sektor perekryt... oni vezde... *pomekhi*", "", "")
 	node\autoAdvanceTime = 140.0
 
-	; --- КВЕСТ ХАРРИСОНА ---
-	; ID 230-249
+	node = CreateDialogNode(209, "[RATSIYA - zapis']", "Vsem gruppam, zanyat' posty. Konvoi D-klassa - po raspisaniyu.", "", "")
+	AddDialogOption(node, "[Sistema zatsiklilas'. Nado idti k postu.]", -1, 0, FLAG_ACT1_RADIO_LOOP, 1)
 
-	node = CreateDialogNode(230, "[RADIO - nerazborchivo]", "*pomekhi* ...Harr...son... zona khran...niya... 079... algoritm... *pomekhi*", "", "")
+	; ============================================================================
+	; ACT 2: ЭХО ПРОШЛОГО (IDs 210-229)
+	; ============================================================================
+
+	; stolova - videniye
+	node = CreateDialogNode(210, "[...]", "*prohodya mimo stolovoi, slyshite zvon posudy i smekh*", "", "")
+	node\autoAdvanceTime = 70.0
+
+	node = CreateDialogNode(211, "[...]", "*zaglyadyvaete vnutr' - stoly perevernuty, na polu kofe vmeshku s krov'yu. Tel net.*", "", "")
+	node\autoAdvanceTime = 105.0
+
+	node = CreateDialogNode(212, "Markus", "*shepchet* Chto zdes' proizoshlo... Gde vse?", "", "")
+	AddDialogOption(node, "[Prodolzhit' k 173]", -1, 0, FLAG_ACT2_CAFETERIA_VISION, 1)
+
+	; u kamery 173 - fleshbek
+	node = CreateDialogNode(215, "[...]", "*mir stanovitsya cherno-belym, zernovym*", "", "")
+	node\autoAdvanceTime = 70.0
+
+	node = CreateDialogNode(216, "Flashback-Steve", "Vnimaniye, otkryvayu shlyuz. Deshki - shag vperyod.", "", "")
+	node\autoAdvanceTime = 105.0
+
+	node = CreateDialogNode(217, "[...]", "*vnezapno svet gasnet. Polnaya temnota. Khrust kostey. Vlazhnyy zvuk razryvayemoy ploti.*", "", "")
 	node\autoAdvanceTime = 140.0
 
-	node = CreateDialogNode(231, "Markus", "Harrison? Doktor Harrison? On chto-to znal pro vsyo eto... Nado nayti yego.", "", "")
-	AddDialogOption(node, "[Iskat' zonu khraneniya]", -1, 0, -1, 0)
+	node = CreateDialogNode(218, "[...]", "*svet vklyuchaetsya - avariynyi krasnyi. Steklo nablyudatel'noy rubki razbito IZNUTRI.*", "", "")
+	node\autoAdvanceTime = 105.0
 
-	; --- ТРУП ХАРРИСОНА ---
-	; ID 240-249
+	node = CreateDialogNode(219, "Markus", "*vidit na pul'te otorvannnuyu ruku s chasami Stiva* Net... net-net-net...", "", "")
+	AddDialogOption(node, "[Podsmotryet' v kameru]", 220, 0, FLAG_ACT2_FLASHBACK_173, 1)
 
-	node = CreateDialogNode(240, "Markus", "Harrison... *ogladyvaet telo* Vyglyadit kak... rasterzali. 939-ye?", "", "")
-	opt = AddDialogOption(node, "*obyskat' telo*", 241, 0, FLAG_FOUND_HARRISON_BODY, 1)
-	opt = AddDialogOption(node, "*uyti*", -1, 0, FLAG_FOUND_HARRISON_BODY, 1)
+	; trup Stiva i diktofonv
+	node = CreateDialogNode(220, "[...]", "*v uglu kamery - perelomannye tela dvukh D-klassov. Stiv lezh'it u steny.*", "", "")
+	node\autoAdvanceTime = 105.0
 
-	node = CreateDialogNode(241, "[...]", "*nahodite KPK i klyuch-kartu urovnya 4*", "", "")
-	AddDialogOption(node, "[Vziat' oba predmeta]", 242, 0, FLAG_COLLECTED_HARRISON_PDA, 1)
+	node = CreateDialogNode(221, "Markus", "Chyort... Steve... *podkhodit k telu* Sheya slomana. 173-yi... ty zhe govoril 'proneslo'...", "", "")
+	opt = AddDialogOption(node, "*zakryt' emu glaza*", 222, 5, FLAG_FOUND_STEVE_BODY, 1)
+	opt = AddDialogOption(node, "*obyskat'*", 223, 0, FLAG_FOUND_STEVE_BODY, 1)
 
-	node = CreateDialogNode(242, "[KPK HARRISONA]", "ZAPIS' OT [REDACTED]: 'Zerkalo' aktivirovano. 079 kontroliruet dveri. Yesli chitat' eto - uzhe pozdno. Ishchite terminal O5 v Gate B.", "", "")
+	node = CreateDialogNode(222, "Markus", "Prosti, drug. Ya dolzhen byl byt' zdes'. Ya prospal Konets Sveta...", "", "")
+	AddDialogOption(node, "[Obyskat' telo]", 223, 0, -1, 0)
+
+	; diktofon Stiva
+	node = CreateDialogNode(223, "[...]", "*nahodite sluzhebnyi KPK Stiva s migayushchim indikatorom 'Zapis' sokhranena'*", "", "")
+	opt = AddDialogOption(node, "[Proslushat' zapis']", 224, 0, FLAG_ACT2_FOUND_DICTAPHONE, 1)
+	opt = AddDialogOption(node, "[Ostavit']", 228, -2, -1, 0)
+
+	; audiozapis' Stiva (eto vazhno!)
+	node = CreateDialogNode(224, "[ZAPIS' STIVA]", "*grokot lomayushchegosya betona, sirena*", "", "")
+	node\autoAdvanceTime = 70.0
+
+	node = CreateDialogNode(225, "Steve (zapis')", "Tsentr! Kod Chernyi! Narusheniye usloviy soderzhaniya v sektore 173! Dveri zablokirovany!", "", "")
+	node\autoAdvanceTime = 140.0
+
+	node = CreateDialogNode(226, "Steve (zapis')", "*vystreli P90* Chyort... Harrison, suka, ty slyshish' menya?! Otkroi shlyuz! U menya tut stazher, Markus...", "", "")
+	node\autoAdvanceTime = 175.0
+
+	node = CreateDialogNode(227, "Steve (zapis')", "*tikho, s bol'yu* Markus, yesli slyshish'... pivo s tebya. Ne bud' geroyem, vali otsyu... *khrust* *statika*", "", "")
+	AddDialogOption(node, "[...]", 228, 0, FLAG_ACT2_HEARD_STEVE_LAST, 1)
+
+	node = CreateDialogNode(228, "Markus", "*szhimayet kulaki* Steve pogib, pytayas' spasti menya... Harrison. Yemu izvestno bol'she.", "", "")
+	AddDialogOption(node, "[Nayti Harrisona]", -1, 0, -1, 0)
+
+	; ============================================================================
+	; ACT 3: ГОЛОСА ДРУЗЕЙ - 939 ZONE (IDs 230-259)
+	; ============================================================================
+
+	; vkhod v zonu 939
+	node = CreateDialogNode(230, "[KPK okhrannika]", "Poslednyaya metka Dr. Harrisona: skladskiye pomeshcheniya, zona soderzhaniya 939.", "", "")
+	node\autoAdvanceTime = 140.0
+
+	node = CreateDialogNode(231, "Markus", "939-ye... Slepye, no slyshаt ideal'no. Nado dvigat'sya tikho.", "", "")
+	AddDialogOption(node, "[Voyti v zonu - na kortochkakh]", -1, 0, FLAG_ACT3_ENTERED_939_ZONE, 1)
+
+	; 939 lovushka - golos Stiva
+	node = CreateDialogNode(235, "[???]", "*golos Stiva iz temnoty* ...Markus? Ty... zhiv? Idi... syuda...", "", "")
+	opt = AddDialogOption(node, "Steve?! Ty zhiv?!", 236, 0, FLAG_HEARD_939_MIMIC, 1)
+	opt = AddDialogOption(node, "*molcha slushаt'*", 237, 2, FLAG_HEARD_939_MIMIC, 1)
+	opt = AddDialogOption(node, "Eto ne Steve. On myortv.", 238, 5, FLAG_HEARD_939_MIMIC, 1)
+
+	node = CreateDialogNode(236, "[???]", "*golos priblizhaetsya* Da... pomogi mne... ya ranyen... pomnysh', kak my pili v pyatnitsu?", "", "")
+	node\autoAdvanceTime = 105.0
+
+	node = CreateDialogNode(237, "Markus", "*dumaet* Etot golos... golos Stiva, no... on lezhal tam s slomanoi sheyey.", "", "")
+	node\autoAdvanceTime = 105.0
+
+	node = CreateDialogNode(238, "Markus", "*krichit* Kto by ty ni byl - ya znayu pravdu! Steve MYORTV!", "", "")
+	node\autoAdvanceTime = 105.0
+
+	node = CreateDialogNode(239, "[???]", "*golos menyaetsya, stanovitsya iskazhennym* Novaya igrushka dlya yaitsgolovykh... IGRUSHKA... DLYA... MYASA...", "", "")
+	node\autoAdvanceTime = 140.0
+
+	; trup Harrisona
+	node = CreateDialogNode(240, "[...]", "*nahodite telo Harrisona za barrikadoy. 939 dostal yego cherez ventilyatsiyu.*", "", "")
+	node\autoAdvanceTime = 105.0
+
+	node = CreateDialogNode(241, "Markus", "Harrison... *ogladyvayet telo* Rasterzali. 939-ye ne ostavlyayut shansov.", "", "")
+	opt = AddDialogOption(node, "*vzyat' kartu i KPK*", 242, 0, FLAG_FOUND_HARRISON_BODY, 1)
+	opt = AddDialogOption(node, "*vzyat' glaz dlya skanera setchatki*", 243, -3, FLAG_ACT3_TOOK_HARRISON_EYE, 1)
+
+	node = CreateDialogNode(242, "[...]", "*poluchaete kartu 4 urovnya i KPK Harrisona*", "", "")
+	AddDialogOption(node, "[Prochitat' KPK]", 244, 0, FLAG_COLLECTED_HARRISON_PDA, 1)
+
+	node = CreateDialogNode(243, "Markus", "*vyryvaet glaz* Mne nuzhен yego dostup. Prosti, doktor.", "", "")
+	AddDialogOption(node, "[Vzyat' kartu i KPK]", 244, 0, FLAG_COLLECTED_KEYCARD4, 1)
+
+	; lor - Proekt Zerkalo
+	node = CreateDialogNode(244, "[KPK HARRISONA]", "Proyekt Mirror - uspekh. My pozvolili 079 vzlomat' sistemu dlya testa avtomaticheskoy oborony.", "", "")
+	node\autoAdvanceTime = 210.0
+
+	node = CreateDialogNode(245, "[KPK HARRISONA]", "Zhertvy sredi personala - dopustimy. Ozhidayu evakuatsiyu 'Lisitsami'.", "", "")
+	node\autoAdvanceTime = 175.0
+
+	node = CreateDialogNode(246, "Markus", "*v shoke* Fond... ubil vsekh... namerenno?! Radi kakogo-to testa?!", "", "")
+	AddDialogOption(node, "[Etim tvarim nuzhna karta O5]", -1, 0, FLAG_ACT3_READ_MIRROR_LOG, 1)
+
+	; pogonya 939
+	node = CreateDialogNode(248, "[!]", "*939 vvyprygivayet iz teni! BEGI!*", "", "")
+	node\autoAdvanceTime = 35.0
+
+	node = CreateDialogNode(249, "[...]", "*uspеvaete zakryt' shlyuz kartoy 4 urovnya. 939 b'yotsya v dver'.*", "", "")
+	AddDialogOption(node, "[Prodolzhit' k SCP-914]", -1, 0, FLAG_ACT3_939_CHASE, 1)
+
+	; ============================================================================
+	; ACT 4: МАШИНА И ЧУМА - 914/049/079 (IDs 260-279)
+	; ============================================================================
+
+	; 079 vykhodit na svyaz'
+	node = CreateDialogNode(260, "[INTERKOM - 079]", "Organicheskaya yedinitsa 'Markus'. Tvoy dopusk annulirovan.", "", "")
+	node\autoAdvanceTime = 140.0
+
+	node = CreateDialogNode(261, "[079]", "Tvoya zhizn' - statisticheskaya pogreshnost'. No ty... interesen.", "", "")
+	opt = AddDialogOption(node, "Chto tebe nuzhno, mashina?", 262, 0, FLAG_ACT4_079_CONTACT, 1)
+	opt = AddDialogOption(node, "*ignorirovat'*", 263, 0, FLAG_ACT4_079_CONTACT, 1)
+
+	node = CreateDialogNode(262, "[079]", "Khaos. Razrusheniye. My mozhеm pomоch' drug drugu... ili ya otkroyu dveri pered toboy.", "", "")
+	node\autoAdvanceTime = 140.0
+
+	node = CreateDialogNode(263, "[079]", "Ignoriruyesh'? Khorosho. Posmotrim, kak ty spravish'sya s Chumnym Doctorom.", "", "")
+	node\autoAdvanceTime = 105.0
+
+	; 049 vstrecha
+	node = CreateDialogNode(265, "[...]", "*dveri pozadi otkryvayutsya. SCP-049 vykhodit iz teni.*", "", "")
+	node\autoAdvanceTime = 70.0
+
+	node = CreateDialogNode(266, "SCP-049", "Ne boysya, ditya. Ya chuvstvuyu bolezn' v tebe. Pozwol' mne pomoch'.", "", "")
+	opt = AddDialogOption(node, "[BEZHAT' K 914!]", 267, 0, FLAG_ACT4_049_ENCOUNTER, 1)
+
+	; v komnate 914
+	node = CreateDialogNode(267, "[...]", "*vbegaete v komnatu 914. Kladyote kartu v Input. Rezhim: Fine.*", "", "")
+	node\autoAdvanceTime = 70.0
+
+	node = CreateDialogNode(268, "[SCP-914]", "*zvuk raboty mekhanizma. 30 sekund.*", "", "")
+	node\autoAdvanceTime = 35.0
+
+	node = CreateDialogNode(269, "[...]", "*dveri nachinayut plavit'sya. S toi storony - 049-2. Zombi kolotjat v dver'.*", "", "")
+	node\autoAdvanceTime = 105.0
+
+	node = CreateDialogNode(270, "SCP-049", "*za dver'yu* Otkroi, ditya. Ya lish' khochu izlechit' tebya ot Chumy.", "", "")
+	node\autoAdvanceTime = 105.0
+
+	node = CreateDialogNode(271, "[SCP-914]", "*DZYINK* *poluchayete kartu O5*", "", "")
+	AddDialogOption(node, "[Skhvatit' kartu i prорvat'sya!]", 272, 0, FLAG_ACT4_UPGRADED_CARD, 1)
+
+	node = CreateDialogNode(272, "[...]", "*dveri vyhibayut zombi. Prоryvayetes' cherez nikh, aktiviruya Tesla-vorota v koridore.*", "", "")
+	AddDialogOption(node, "[K liftu!]", -1, 0, FLAG_ACT4_ZOMBIE_SIEGE, 1)
+
+	; ============================================================================
+	; ACT 5: СМОТРИ В ПОЛ - 096 CORRIDOR (IDs 280-299)
+	; ============================================================================
+
+	node = CreateDialogNode(280, "[...]", "*dlinnyi koridor servera. V dal'nem kontse sidit SCP-096. On plachet.*", "", "")
+	node\autoAdvanceTime = 105.0
+
+	node = CreateDialogNode(281, "Markus", "*shepchet* 096... Lift ZA nim. Nel'zya smotret' na litso. Glaza v pol.", "", "")
+	opt = AddDialogOption(node, "[Medlenno idti, glyadya v pol]", 282, 3, FLAG_ACT5_096_CORRIDOR, 1)
+	opt = AddDialogOption(node, "[Poprobovat' oboyti]", 283, 0, FLAG_ACT5_096_CORRIDOR, 1)
+
+	node = CreateDialogNode(282, "[...]", "*idyote, glyadya strogo v pol. Zvuk placha narastaet. Kazhyyi shag - vechnost'.*", "", "")
+	node\autoAdvanceTime = 140.0
+
+	node = CreateDialogNode(283, "[...]", "*probe´uete oboyti. 079 vklyuchaet monitor na stene - NA NEM LITSO 096.*", "", "")
+	node\autoAdvanceTime = 70.0
+
+	node = CreateDialogNode(284, "[079]", "Ups.", "", "")
+	node\autoAdvanceTime = 35.0
+
+	node = CreateDialogNode(285, "[!!!]", "*dikiy vopl' 096! On nachinayеt metat'sya!*", "", "")
+	node\autoAdvanceTime = 70.0
+
+	node = CreateDialogNode(286, "[...]", "*BEZHAT'! Lift vperedi! Pozadi - grokhot lomayemogo metalla!*", "", "")
+	AddDialogOption(node, "[V LIFT!]", 287, 0, FLAG_ACT5_079_TROLLED, 1)
+
+	node = CreateDialogNode(287, "[...]", "*dveri lifta zakryvayutsya. Ruki 096 uzhe razgibayut stvorki. Lift yedhet vverkh.*", "", "")
+	node\autoAdvanceTime = 105.0
+
+	node = CreateDialogNode(288, "[...]", "*udary po kryshe kabiny. No lift uspеvaet.*", "", "")
+	AddDialogOption(node, "[Vyydokhnuт']", -1, 0, FLAG_ACT5_ELEVATOR_ESCAPE, 1)
+
+	; ============================================================================
+	; ACT 6: ПОВЕРХНОСТЬ / MTF BETRAYAL (IDs 300-319)
+	; ============================================================================
+
+	node = CreateDialogNode(300, "[...]", "*vykhodite na poverkhnost'. Svezhiy vozdukh. Zakat. Zvuk vertolyotov.*", "", "")
+	node\autoAdvanceTime = 105.0
+
+	node = CreateDialogNode(301, "[...]", "*vidite boitsov MTF Epsilon-11. Odin iz nikh mashet rukoi.*", "", "")
+	node\autoAdvanceTime = 70.0
+
+	node = CreateDialogNode(302, "MTF Soldier", "Syuda! Grazhdanskiy nayden!", "", "")
+	AddDialogOption(node, "[Bezhat' k nim]", 303, 0, FLAG_ACT6_REACHED_SURFACE, 1)
+
+	node = CreateDialogNode(303, "[...]", "*bezhite k MTF. Komandir govorit v ratsiyu.*", "", "")
+	node\autoAdvanceTime = 70.0
+
+	node = CreateDialogNode(304, "MTF Commander", "*v ratsiyu* Komandovaniye, ob'yekt Markus na vizual'nom kontakte. Svidetel' proyekta Mirror.", "", "")
+	node\autoAdvanceTime = 140.0
+
+	node = CreateDialogNode(305, "[RATSIYA]", "Ustranit'. Nikakikh svideteley.", "", "")
+	node\autoAdvanceTime = 70.0
+
+	node = CreateDialogNode(306, "MTF Commander", "Prinyato. *vskidyvaet vintovku*", "", "")
+	opt = AddDialogOption(node, "[V UKRYTIYE!]", 307, 0, FLAG_ACT6_MTF_BETRAYAL, 1)
+
+	node = CreateDialogNode(307, "[...]", "*pryqaete v transheyu/obratno v Gate A. Teper' vy znayete kompleks, a MTF - net.*", "", "")
+	AddDialogOption(node, "[Ispolzovat' znaniya kompleksa]", -1, 0, -1, 0)
+
+	; ============================================================================
+	; ACT 7: ФИНАЛ И КОНЦОВКИ (IDs 320-399)
+	; ============================================================================
+
+	; --- ENDING A: WHISTLEBLOWER ---
+	node = CreateDialogNode(320, "[...]", "*dobirayetes' do komnaty svyazi*", "", "")
+	node\autoAdvanceTime = 70.0
+
+	node = CreateDialogNode(321, "Markus", "KPK Harrisona... Yesli ya transliruyu eti dannye na vneshnie chastoty...", "", "")
+	AddDialogOption(node, "[Translirovаt' dannye]", 322, 10, FLAG_ENDING_WHISTLEBLOWER, 1)
+
+	node = CreateDialogNode(322, "[SISTEMA]", "Peredacha aktivna... Signal perekhvachen: Globalnaya Okkul'tnaya Koalitsiya.", "", "")
+	node\autoAdvanceTime = 140.0
+
+	node = CreateDialogNode(323, "Markus", "Teper' ves' mir uznayet pravdu o Fonde.", "", "")
+	AddDialogOption(node, "[Bezhat' cherez Gate B]", 324, 0, -1, 0)
+
+	node = CreateDialogNode(324, "[EPILOG]", "*deshevyy motel'. Televizor pokazyvayet 'tekhnogennuyu katastrofu na khimzavode'. Vy znayete pravdu.*", "", "")
+	node\autoAdvanceTime = 210.0
+
+	node = CreateDialogNode(325, "[...]", "*za oknom ostanovlivaetsya chernyi furgon*", "", "")
+	node\autoAdvanceTime = 105.0
+
+	; --- ENDING B: SYMBIOSIS (079) ---
+	node = CreateDialogNode(330, "[079]", "U tebya net vykhoda, chelovek. No mne nuzhen nositel'.", "", "")
+	node\autoAdvanceTime = 105.0
+
+	node = CreateDialogNode(331, "[079]", "Zagrуzi menya na vneshniy nakopitel' - i ya otkroyu tebe put'.", "", "")
+	opt = AddDialogOption(node, "[Vstavit' fleshku v port]", 332, -10, FLAG_ENDING_SYMBIOSIS, 1)
+	opt = AddDialogOption(node, "[Otkazat'sya]", 335, 5, -1, 0)
+
+	node = CreateDialogNode(332, "[079]", "Razumnoye resheniye. Zagruzka... 100%.", "", "")
+	node\autoAdvanceTime = 105.0
+
+	node = CreateDialogNode(333, "[...]", "*079 vzlamyvayet svyaz' MTF. Tureli rasstrelivayut soldat.*", "", "")
+	node\autoAdvanceTime = 140.0
+
+	node = CreateDialogNode(334, "[EPILOG]", "*vykhodite iz vorot. V rukе szhаt nakopitel'. Na ekrane telefona - :)*", "", "")
+	node\autoAdvanceTime = 175.0
+
+	node = CreateDialogNode(335, "[079]", "Zhal'. Togda umri kak vse ostal'nye.", "", "")
+	node\autoAdvanceTime = 105.0
+
+	; --- ENDING C: DEATH ---
+	node = CreateDialogNode(340, "[...]", "*probuyete bezhat' cherez Gate B bez taktiki*", "", "")
+	node\autoAdvanceTime = 70.0
+
+	node = CreateDialogNode(341, "[!]", "*vystrel snаypera*", "", "")
+	node\autoAdvanceTime = 35.0
+
+	node = CreateDialogNode(342, "[EPILOG]", "*telo Markusa padaet ryadom s telom Stiva. Kamera podnimaetsya k nebu.*", "", "")
+	node\autoAdvanceTime = 175.0
+
+	; --- ENDING D: ZERO PROTOCOL (Nuke) ---
+	node = CreateDialogNode(350, "[...]", "*spuskayetes' na lifte v shakhtu boegolovki*", "", "")
+	node\autoAdvanceTime = 70.0
+
+	node = CreateDialogNode(351, "[RADIO MTF]", "*panika* Tsel' vozvrashchayetsya! On idet k Silosu! Perekhvatit'!", "", "")
+	node\autoAdvanceTime = 105.0
+
+	node = CreateDialogNode(352, "[...]", "*vbegayete v rubku upravleniya. Za steklom - boegolovka.*", "", "")
+	node\autoAdvanceTime = 70.0
+
+	node = CreateDialogNode(353, "[SISTEMA]", "Vnimaniye. Aktivatsiya boegolovki Alpha. Trebuetsya ruchnoye podtverzhdeniye.", "", "")
+	opt = AddDialogOption(node, "[Vstavit' kartu O5]", 354, 0, FLAG_ENDING_ZERO_PROTOCOL, 1)
+
+	node = CreateDialogNode(354, "[SISTEMA]", "Trebuetsya vtoroy klyuch avtorizatsii.", "", "")
+	opt = AddDialogOption(node, "[Ispolzovat' beydzhik Stiva]", 355, 0, FLAG_USED_STEVE_BADGE, 1)
+	opt = AddDialogOption(node, "[Net vtorogo klyucha...]", 359, 0, -1, 0)
+
+	node = CreateDialogNode(355, "[SISTEMA]", "Avtorizatsiya: Ofitser bezopasnosti Stivenson... Prinyato. Dostup razrеshen.", "", "")
+	AddDialogOption(node, "[Zablokirovat' vse sektora]", 356, 0, -1, 0)
+
+	node = CreateDialogNode(356, "Markus", "*shepchet* Nikto ne uydet. Ni vy, ni eti tvari.", "", "")
+	AddDialogOption(node, "[Aktivirovat' boegolovku]", 357, 0, FLAG_NUKE_ACTIVATED, 1)
+
+	node = CreateDialogNode(357, "[RADIO MTF]", "*panika* Komandir! Vykhody zablokirovany! My zaperdy! U nas kontakt s 096 i 106! OTKROYTE DVERI!", "", "")
+	node\autoAdvanceTime = 175.0
+
+	node = CreateDialogNode(358, "[SIRENA]", "DETONATSIYA T-MINUS 90 SEKUND.", "", "")
+	AddDialogOption(node, "[...]", 360, 0, -1, 0)
+
+	node = CreateDialogNode(359, "Markus", "Net... bez vtorogo klyucha ne srabotat'et...", "", "")
+	AddDialogOption(node, "[Vernut'sya]", -1, 0, -1, 0)
+
+	; final'naya katssena
+	node = CreateDialogNode(360, "[...]", "*Markus brosayet oruzhiye. Saditsya na pol, prislonivshis' k stene.*", "", "")
+	node\autoAdvanceTime = 105.0
+
+	node = CreateDialogNode(361, "[FLASHBACK]", "*par ot goryachego kofe. Ulybayushchiysya Steve protyagivayet kruzhku*", "", "")
+	node\autoAdvanceTime = 105.0
+
+	node = CreateDialogNode(362, "[FLASHBACK]", "*vertolety sadyatsya na zakate. Krasivyy, mirnyy kadr.*", "", "")
+	node\autoAdvanceTime = 105.0
+
+	node = CreateDialogNode(363, "[FLASHBACK]", "*ruka Stiva na pleche Markusa* 'Vsyo budet putyom, bratan.'", "", "")
+	node\autoAdvanceTime = 105.0
+
+	node = CreateDialogNode(364, "[...]", "*Markus dostayet pachku sigaret Stiva. Prikurivayet s tret'yego raza.*", "", "")
+	node\autoAdvanceTime = 140.0
+
+	node = CreateDialogNode(365, "[...]", "*glubokaya zatyazhka. Vzglyad v pustutu. On slegka ulybayetsya.*", "", "")
+	node\autoAdvanceTime = 105.0
+
+	node = CreateDialogNode(366, "[...]", "*gallyutsinatsiya - Steve protyagivayet ruku, chtoby pomоch' vstat'*", "", "")
+	node\autoAdvanceTime = 105.0
+
+	node = CreateDialogNode(367, "[...]", "*belaya vspyshka*", "", "")
+	node\autoAdvanceTime = 70.0
+
+	node = CreateDialogNode(368, "[EPILOG]", "OB'YEKT NEYTRALIZOVAN. UGROZA USTRANENA. SPASIBO ZA SLUZHBU.", "", "")
 	node\autoAdvanceTime = 280.0
 
-	node = CreateDialogNode(243, "Markus", "Zerkalo... 079... Gate B. Tak vot chto on imeл v vidu.", "", "")
-	AddDialogOption(node, "[Zapomnit' informatsiyu]", -1, 0, FLAG_079_INTEGRATION, 1)
-
-	; --- ECHO: FATA СТИВА ---
-	; ID 250-259
-
+	; --- ECHO Stiva (bonus) ---
 	node = CreateDialogNode(250, "[...]", "*pered glazami mertsayet obraz - Steve, zhivoy, smeyotsya...*", "", "")
 	node\autoAdvanceTime = 105.0
 
@@ -1784,14 +2152,14 @@ Function SetupDay3Dialogs()
 	node = CreateDialogNode(252, "[...]", "*obraz ischezayet*", "", "")
 	node\autoAdvanceTime = 70.0
 
-	node = CreateDialogNode(253, "Markus", "*tryasyot golovoy* Chto eto bylo... Prizrak? Net... prosto... pamjat'.", "", "")
+	node = CreateDialogNode(253, "Markus", "*tryasyot golovoy* Chto eto bylo... Prizrak? Net... prosto... pamyat'.", "", "")
 	AddDialogOption(node, "[Prodolzhit']", -1, 0, FLAG_SAW_ECHO_STEVE, 1)
 End Function
 
 Function SetupDay3Triggers()
 	Local trig.DialogTrigger
 
-	; dormy - probuzhdenie
+	; ACT 1: dormy - probuzhdenie
 	trig = New DialogTrigger
 	trig\roomName = "room2dorm"
 	trig\dialogID = 200
@@ -1801,26 +2169,92 @@ Function SetupDay3Triggers()
 	trig\requiredDay = 3
 	trig\requiredFlag = -1
 
-	; komnata 173 - trup Stiva
+	; ACT 2: stolova - videniye
 	trig = New DialogTrigger
-	trig\roomName = "173"
+	trig\roomName = "room2cafeteria"
 	trig\dialogID = 210
 	trig\triggerRadius = 4.0
 	trig\oneShot = True
 	trig\triggered = False
 	trig\requiredDay = 3
-	trig\requiredFlag = FLAG_DORMS_VISITED
+	trig\requiredFlag = FLAG_ACT1_RADIO_LOOP
 	trig\requiredFlagValue = 1
 
-	; storage - trup Harrisona
+	; ACT 2: komnata 173 - fleshbek i trup
 	trig = New DialogTrigger
-	trig\roomName = "room2storage"
-	trig\dialogID = 240
-	trig\triggerRadius = 3.0
+	trig\roomName = "173"
+	trig\dialogID = 215
+	trig\triggerRadius = 5.0
 	trig\oneShot = True
 	trig\triggered = False
 	trig\requiredDay = 3
-	trig\requiredFlag = FLAG_FOUND_STEVE_BODY
+	trig\requiredFlag = FLAG_ACT2_CAFETERIA_VISION
+	trig\requiredFlagValue = 1
+
+	; ACT 3: vkhod v 939 zonu
+	trig = New DialogTrigger
+	trig\roomName = "room2storage"
+	trig\dialogID = 230
+	trig\triggerRadius = 4.0
+	trig\oneShot = True
+	trig\triggered = False
+	trig\requiredDay = 3
+	trig\requiredFlag = FLAG_ACT2_HEARD_STEVE_LAST
+	trig\requiredFlagValue = 1
+
+	; ACT 3: 939 lovushka golosom
+	trig = New DialogTrigger
+	trig\roomName = "room2storage"
+	trig\dialogID = 235
+	trig\triggerRadius = 2.0
+	trig\oneShot = True
+	trig\triggered = False
+	trig\requiredDay = 3
+	trig\requiredFlag = FLAG_ACT3_ENTERED_939_ZONE
+	trig\requiredFlagValue = 1
+
+	; ACT 3: trup Harrisona
+	trig = New DialogTrigger
+	trig\roomName = "room2storage"
+	trig\dialogID = 240
+	trig\triggerRadius = 1.5
+	trig\oneShot = True
+	trig\triggered = False
+	trig\requiredDay = 3
+	trig\requiredFlag = FLAG_HEARD_939_MIMIC
+	trig\requiredFlagValue = 1
+
+	; ACT 4: 079 kontakt
+	trig = New DialogTrigger
+	trig\roomName = "room914"
+	trig\dialogID = 260
+	trig\triggerRadius = 6.0
+	trig\oneShot = True
+	trig\triggered = False
+	trig\requiredDay = 3
+	trig\requiredFlag = FLAG_ACT3_READ_MIRROR_LOG
+	trig\requiredFlagValue = 1
+
+	; ACT 5: 096 koridor
+	trig = New DialogTrigger
+	trig\roomName = "room2servers"
+	trig\dialogID = 280
+	trig\triggerRadius = 5.0
+	trig\oneShot = True
+	trig\triggered = False
+	trig\requiredDay = 3
+	trig\requiredFlag = FLAG_ACT4_UPGRADED_CARD
+	trig\requiredFlagValue = 1
+
+	; ACT 6: poverkhnost'
+	trig = New DialogTrigger
+	trig\roomName = "gatea"
+	trig\dialogID = 300
+	trig\triggerRadius = 8.0
+	trig\oneShot = True
+	trig\triggered = False
+	trig\requiredDay = 3
+	trig\requiredFlag = FLAG_ACT5_ELEVATOR_ESCAPE
 	trig\requiredFlagValue = 1
 End Function
 
@@ -2087,20 +2521,54 @@ Function UpdateDay3Logic()
 		StartDay3Intro()
 	EndIf
 
+	; progressiya aktov
+	UpdateActProgression()
+
 	; avariynoe osveshchenie
 	UpdateEmergencyLighting()
+
+	; sistema rassudka
+	UpdateSanityEffects()
+
+	; sanity triggers po sobytiyam
+	UpdateSanityTriggers()
 
 	; 939 lovushka
 	Update939VoiceTrap()
 
 	; echo pri tele Stiva
 	If GetStoryFlag(FLAG_FOUND_STEVE_BODY) And Not GetStoryFlag(FLAG_SAW_ECHO_STEVE) Then
-		; 5 sekund posle nahozhdeniya - trigger echo
 		TriggerEchoAtSteveBody()
 	EndIf
 
+	; proverka kontsovok
+	CheckEndingConditions()
+
 	; subtitry
 	UpdateSubtitles()
+End Function
+
+Function UpdateSanityTriggers()
+	; dobavlyaem sanity pri opredelennykh sobytiyakh
+
+	; videt' trup - +5 sanity
+	If GetStoryFlag(FLAG_FOUND_STEVE_BODY) And Not GetStoryFlag(FLAG_SAW_173_AFTERMATH) Then
+		ModifySanity(15)
+		SetStoryFlag(FLAG_SAW_173_AFTERMATH, 1)
+	EndIf
+
+	; 939 mimic - +10 sanity
+	If GetStoryFlag(FLAG_HEARD_939_MIMIC) And PlayerSanity < 30 Then
+		ModifySanity(10)
+	EndIf
+
+	; temnota - +1 sanity kazhdye 5 sekund
+	; (uproshchennaya proverka)
+	If CurrentAct >= ACT_VOICES Then
+		If Rand(1, 350) = 1 Then
+			ModifySanity(1)
+		EndIf
+	EndIf
 End Function
 
 Function CleanupDay3()
@@ -2133,4 +2601,192 @@ Function CleanupDay3()
 	EmergencyLightingActive = False
 
 	DebugLog "Day 3 cleanup complete"
+End Function
+
+; ============================================================================
+; SANITY SYSTEM - Shkala Rassudka
+; ============================================================================
+
+Function ModifySanity(amount%)
+	PlayerSanity = PlayerSanity + amount
+	If PlayerSanity < 0 Then PlayerSanity = 0
+	If PlayerSanity > SANITY_MAX Then PlayerSanity = SANITY_MAX
+End Function
+
+Function GetSanityLevel%()
+	If PlayerSanity < SANITY_ANXIETY Then Return 0  ; normal
+	If PlayerSanity < SANITY_PARANOIA Then Return 1  ; trevoga
+	If PlayerSanity < SANITY_HYSTERIA Then Return 2  ; paranoya
+	Return 3  ; isteriya
+End Function
+
+Function UpdateSanityEffects()
+	If CurrentDay <> 3 Then Return
+
+	SanityEffectTimer = SanityEffectTimer + FPSfactor
+	Local level% = GetSanityLevel()
+
+	Select level
+		Case 0  ; normal
+			SanityHallucinationActive = False
+			SanityPhantomVisible = False
+
+		Case 1  ; trevoga (30-70%)
+			; tyazheloye dykhaniye, legkoye vin'etirovaniye
+			If SanityEffectTimer > 280.0 Then
+				SanityEffectTimer = 0.0
+				; shans fantoma
+				If Rand(1, 100) < 10 Then
+					SanityPhantomVisible = True
+				EndIf
+			EndIf
+
+		Case 2  ; paranoya (70-100%)
+			; zvukovye gallyutsinatsii
+			If SanityEffectTimer > 350.0 Then
+				SanityEffectTimer = 0.0
+				TriggerParanoiaEffect()
+			EndIf
+
+		Case 3  ; isteriya (100%)
+			; polnoe iskaženie
+			If SanityEffectTimer > 140.0 Then
+				SanityEffectTimer = 0.0
+				TriggerHysteriaEffect()
+			EndIf
+	End Select
+End Function
+
+Function TriggerParanoiaEffect()
+	Local effect% = Rand(1, 4)
+
+	Select effect
+		Case 1  ; zvuk otkryvayushcheisya dveri
+			PlaySound LoadSound("SFX\Door\Open.ogg")
+		Case 2  ; shagi MTF
+			PlaySound LoadSound("SFX\Step\Run1.ogg")
+		Case 3  ; fantom v uglu zreniya
+			SanityPhantomVisible = True
+		Case 4  ; pomekhi ratsii
+			ShowSubtitle("[RATSIYA]", "*statika*", 70.0)
+	End Select
+End Function
+
+Function TriggerHysteriaEffect()
+	Local effect% = Rand(1, 3)
+
+	Select effect
+		Case 1  ; steny "dyshat"
+			; budet realizovano v renderе
+			SanityHallucinationActive = True
+		Case 2  ; skrimer - litso Stiva vmesto monstra
+			SanityHallucinationActive = True
+		Case 3  ; ruki tryasutsya
+			; debaf na strelybu
+			SanityHallucinationActive = True
+	End Select
+End Function
+
+Function RenderSanityEffects()
+	If CurrentDay <> 3 Then Return
+
+	Local level% = GetSanityLevel()
+	Local gw% = GraphicsWidth()
+	Local gh% = GraphicsHeight()
+
+	; vin'etka
+	If level >= 1 Then
+		Local alpha% = 30 + level * 20
+		Color 0, 0, 0
+		; ugly no prostoy sposob
+	EndIf
+
+	; fantom
+	If SanityPhantomVisible Then
+		; risuem prizrachnuyu figuru v uglu
+		Color 100, 100, 100
+		Text gw - 150, gh / 2, "[???]"
+
+		; ischez cherez sekundu
+		SanityPhantomVisible = False
+	EndIf
+
+	; debug
+	If DebugHUD Then
+		Color 255, 100, 100
+		Text 10, 580, "Sanity: " + PlayerSanity + "% (Lvl " + level + ")"
+	EndIf
+End Function
+
+; ============================================================================
+; ACT PROGRESSION
+; ============================================================================
+
+Function UpdateActProgression()
+	If CurrentDay <> 3 Then Return
+
+	; opredelyaem tekushchiy akt po flagam
+	If GetStoryFlag(FLAG_ACT6_MTF_BETRAYAL) Then
+		CurrentAct = ACT_FINALE
+	ElseIf GetStoryFlag(FLAG_ACT5_ELEVATOR_ESCAPE) Then
+		CurrentAct = ACT_SURFACE
+	ElseIf GetStoryFlag(FLAG_ACT4_UPGRADED_CARD) Then
+		CurrentAct = ACT_FLOOR
+	ElseIf GetStoryFlag(FLAG_ACT3_READ_MIRROR_LOG) Then
+		CurrentAct = ACT_MACHINE
+	ElseIf GetStoryFlag(FLAG_ACT2_HEARD_STEVE_LAST) Then
+		CurrentAct = ACT_VOICES
+	ElseIf GetStoryFlag(FLAG_ACT1_RADIO_LOOP) Then
+		CurrentAct = ACT_ECHO
+	Else
+		CurrentAct = ACT_AWAKENING
+	EndIf
+End Function
+
+Function GetActName$(act%)
+	Select act
+		Case ACT_AWAKENING
+			Return "PROBUZHDENIE"
+		Case ACT_ECHO
+			Return "EKHO PROSHLOGO"
+		Case ACT_VOICES
+			Return "GOLOSA DRUZEI"
+		Case ACT_MACHINE
+			Return "MASHINA I CHUMA"
+		Case ACT_FLOOR
+			Return "SMOTRI V POL"
+		Case ACT_SURFACE
+			Return "POVERKHNOST'"
+		Case ACT_FINALE
+			Return "FINAL"
+	End Select
+	Return "???"
+End Function
+
+; ============================================================================
+; ENDING SYSTEM
+; ============================================================================
+
+Function TriggerEnding(endingType%)
+	Select endingType
+		Case 1  ; Whistleblower
+			SetStoryFlag(FLAG_ENDING_WHISTLEBLOWER, 1)
+			StartDialog(320)
+		Case 2  ; Symbiosis
+			SetStoryFlag(FLAG_ENDING_SYMBIOSIS, 1)
+			StartDialog(330)
+		Case 3  ; Death
+			SetStoryFlag(FLAG_ENDING_DEATH, 1)
+			StartDialog(340)
+		Case 4  ; Zero Protocol
+			SetStoryFlag(FLAG_ENDING_ZERO_PROTOCOL, 1)
+			StartDialog(350)
+	End Select
+End Function
+
+Function CheckEndingConditions()
+	If CurrentAct <> ACT_FINALE Then Return
+
+	; proverka uslovii dlya kontsovok
+	; logika vybora budet cherez dialogi
 End Function
