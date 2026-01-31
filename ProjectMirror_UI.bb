@@ -523,13 +523,15 @@ Function RenderCompass(gw%, gh%)
 	Rect x - 100, y - 10, 200, 20, True
 
 	; napravleniya
-	Local directions$[4]
-	directions[0] = "N"
-	directions[1] = "E"
-	directions[2] = "S"
-	directions[3] = "W"
-
 	For i% = 0 To 3
+		Local dirLabel$
+		Select i
+			Case 0: dirLabel = "N"
+			Case 1: dirLabel = "E"
+			Case 2: dirLabel = "S"
+			Case 3: dirLabel = "W"
+		End Select
+
 		Local angle# = i * 90.0
 		Local relAngle# = angle - playerYaw
 
@@ -550,7 +552,7 @@ Function RenderCompass(gw%, gh%)
 			Else
 				Color 150, 150, 150
 			EndIf
-			Text compassX - 4, y - 8, directions[i]
+			Text compassX - 4, y - 8, dirLabel
 		EndIf
 	Next
 

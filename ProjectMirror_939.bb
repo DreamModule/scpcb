@@ -343,18 +343,22 @@ Function SelectLureVoice.LearnedVoice(state.SCP939VoiceState)
 		EndIf
 	EndIf
 
-	Local personalVoices.LearnedVoice[8]
+	; Count personal voices and maybe select one
 	Local personalCount% = 0
+	Local selectedPersonal.LearnedVoice = Null
 
 	For v.LearnedVoice = Each LearnedVoice
-		If v\isPersonal And personalCount < 8 Then
-			personalVoices[personalCount] = v
+		If v\isPersonal Then
 			personalCount = personalCount + 1
+			; Random selection with decreasing probability
+			If Rand(1, personalCount) = 1 Then
+				selectedPersonal = v
+			EndIf
 		EndIf
 	Next
 
 	If personalCount > 0 And Rand(1, 100) <= 60 Then
-		Return personalVoices[Rand(0, personalCount - 1)]
+		Return selectedPersonal
 	EndIf
 
 	Return SelectWeightedRandom()
@@ -528,8 +532,9 @@ Function SaveVoiceMimicryState(file%)
 End Function
 
 Function LoadVoiceMimicryState(file%)
-	For v.LearnedVoice = Each LearnedVoice
-		Delete v
+	Local oldVoice.LearnedVoice
+	For oldVoice = Each LearnedVoice
+		Delete oldVoice
 	Next
 	For cat% = 0 To MAX_VOICE_CATEGORIES - 1
 		VoiceCacheCounts(cat) = 0
@@ -538,21 +543,21 @@ Function LoadVoiceMimicryState(file%)
 	TotalLearnedVoices = ReadInt(file)
 
 	For i% = 0 To TotalLearnedVoices - 1
-		Local v.LearnedVoice = New LearnedVoice
-		v\id = ReadInt(file)
-		v\category = ReadInt(file)
-		v\soundPath = ReadLine(file)
-		v\dayLearned = ReadInt(file)
-		v\speakerName = ReadLine(file)
-		v\emotionalWeight = ReadInt(file)
-		v\useCount = ReadInt(file)
-		v\isPersonal = ReadInt(file)
-		v\lastUsedTime = 0
+		Local newVoice.LearnedVoice = New LearnedVoice
+		newVoice\id = ReadInt(file)
+		newVoice\category = ReadInt(file)
+		newVoice\soundPath = ReadLine(file)
+		newVoice\dayLearned = ReadInt(file)
+		newVoice\speakerName = ReadLine(file)
+		newVoice\emotionalWeight = ReadInt(file)
+		newVoice\useCount = ReadInt(file)
+		newVoice\isPersonal = ReadInt(file)
+		newVoice\lastUsedTime = 0
 
-		If v\category >= 0 And v\category < MAX_VOICE_CATEGORIES Then
-			If VoiceCacheCounts(v\category) < MAX_LEARNED_VOICES Then
-				VoiceCacheByCategory(v\category, VoiceCacheCounts(v\category)) = v
-				VoiceCacheCounts(v\category) = VoiceCacheCounts(v\category) + 1
+		If newVoice\category >= 0 And newVoice\category < MAX_VOICE_CATEGORIES Then
+			If VoiceCacheCounts(newVoice\category) < MAX_LEARNED_VOICES Then
+				VoiceCacheByCategory(newVoice\category, VoiceCacheCounts(newVoice\category)) = newVoice
+				VoiceCacheCounts(newVoice\category) = VoiceCacheCounts(newVoice\category) + 1
 			EndIf
 		EndIf
 	Next
