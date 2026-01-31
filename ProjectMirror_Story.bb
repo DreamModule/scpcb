@@ -64,6 +64,18 @@ Const FLAG_SAW_HARRISON_TERMINAL% = 33
 Const FLAG_079_INTEGRATION% = 34
 Const FLAG_DAY2_COMPLETE% = 35
 
+; Day 3 флаги - "Catastrophe"
+Const FLAG_DAY3_STARTED% = 36
+Const FLAG_FOUND_STEVE_BODY% = 37
+Const FLAG_FOUND_HARRISON_BODY% = 38
+Const FLAG_COLLECTED_HARRISON_PDA% = 39
+Const FLAG_COLLECTED_KEYCARD4% = 40
+Const FLAG_HEARD_939_MIMIC% = 41
+Const FLAG_SAW_ECHO_STEVE% = 42
+Const FLAG_EMERGENCY_LIGHTING% = 43
+Const FLAG_SAW_173_AFTERMATH% = 44
+Const FLAG_DORMS_VISITED% = 45
+
 Global DayTransitionPending% = False
 Global DayTransitionTimer# = 0.0
 Global DayTransitionFade# = 0.0
@@ -243,6 +255,8 @@ Function InitStorySystem()
 	SetupDay1Triggers()
 	SetupDay2Dialogs()
 	SetupDay2Triggers()
+	SetupDay3Dialogs()
+	SetupDay3Triggers()
 
 	; звуки для катсцены
 	IntroAnnouncementSFX = LoadSound("SFX\Room\Intro\Announcement.ogg")
@@ -994,6 +1008,9 @@ Function LoadStoryState(file%)
 End Function
 
 Function CleanupStorySystem()
+	; cleanup Day 3 specific stuff
+	CleanupDay3()
+
 	For node.DialogNode = Each DialogNode
 		If node\portrait <> 0 Then
 			FreeImage node\portrait
@@ -1049,6 +1066,13 @@ Function DebugStoryState()
 	If GetStoryFlag(FLAG_SAW_D9341) Then Text 10, flagY, "Saw D-9341" : flagY = flagY + 12
 	If GetStoryFlag(FLAG_WITNESSED_PROCEDURE) Then Text 10, flagY, "Witnessed 173" : flagY = flagY + 12
 	If GetStoryFlag(FLAG_079_INTEGRATION) Then Text 10, flagY, "079 Integration" : flagY = flagY + 12
+	; Day 3 flags
+	If GetStoryFlag(FLAG_DAY3_STARTED) Then Text 10, flagY, "Day3 Started" : flagY = flagY + 12
+	If GetStoryFlag(FLAG_FOUND_STEVE_BODY) Then Text 10, flagY, "Found Steve" : flagY = flagY + 12
+	If GetStoryFlag(FLAG_FOUND_HARRISON_BODY) Then Text 10, flagY, "Found Harrison" : flagY = flagY + 12
+	If GetStoryFlag(FLAG_COLLECTED_HARRISON_PDA) Then Text 10, flagY, "Got PDA" : flagY = flagY + 12
+	If GetStoryFlag(FLAG_HEARD_939_MIMIC) Then Text 10, flagY, "939 Mimic" : flagY = flagY + 12
+	If GetStoryFlag(FLAG_SAW_ECHO_STEVE) Then Text 10, flagY, "Echo Steve" : flagY = flagY + 12
 End Function
 
 Function GetBranchName$(branch%)
@@ -1636,4 +1660,477 @@ Function UpdateDay2Logic()
 
 	; proverka finala
 	OnDay2Complete()
+End Function
+
+; ============================================================================
+; ДЕНЬ 3: "CATASTROPHE"
+; Прорыв случился. Трупы. Хаос. Квест за PDA Харрисона.
+; ============================================================================
+
+; глобалы для Дня 3
+Global Day3Initialized% = False
+Global EmergencyLightingActive% = False
+Global EmergencyLightTimer# = 0.0
+Global EmergencyLightPhase% = 0
+
+; трупы-декорации
+Global SteveCorpse.NPCs = Null
+Global HarrisonCorpse.NPCs = Null
+Global DClassCorpse1.NPCs = Null
+Global DClassCorpse2.NPCs = Null
+
+; локации трупов
+Global SteveCorpseRoom$ = "173"
+Global HarrisonCorpseRoom$ = "room2storage"
+
+; лут с Харрисона
+Global HarrisonPDASpawned% = False
+Global HarrisonKeycard4Spawned% = False
+
+; 939 ловушка
+Global Steve939TrapActive% = False
+Global Steve939TrapTriggered% = False
+
+; alarm sound
+Global Day3AlarmSFX% = 0
+Global Day3AlarmChannel% = 0
+
+Function SetupDay3Dialogs()
+	Local node.DialogNode
+	Local opt.DialogOption
+
+	; --- ПРОБУЖДЕНИЕ: ТРЕВОГА ---
+	; ID 200-209
+
+	node = CreateDialogNode(200, "[TREVOGA]", "VNIMANIE. MASSOVYI PRORYV SODERZHANIYA. VES' PERSONAL - SLEDOVAT' AVARIINYM PROTOKOLAM.", "", "")
+	node\autoAdvanceTime = 175.0
+
+	node = CreateDialogNode(201, "[...]", "*krasnoe avariynoe osveshchenie. sireny.*", "", "")
+	node\autoAdvanceTime = 105.0
+
+	node = CreateDialogNode(202, "Markus", "*dumaet* Chto... Chto proizoshlo? Gde ya? ...dormy. Nado vybrat'sya otsyuda.", "", "")
+	AddDialogOption(node, "[Vstat' s krovatri]", -1, 0, FLAG_DORMS_VISITED, 1)
+
+	; --- ТРУП СТИВА У 173 ---
+	; ID 210-219
+
+	node = CreateDialogNode(210, "Markus", "Chyort... Steve... Oni vsyo-taki otkryli yeyo.", "", "")
+	node\autoAdvanceTime = 140.0
+
+	node = CreateDialogNode(211, "Markus", "*naklonyaetsya k telu* Sheya... slomana. 173-i. Ty zhe govoril - 'proneslo'...", "", "")
+	opt = AddDialogOption(node, "*zakryt' emu glaza*", 212, 5, FLAG_FOUND_STEVE_BODY, 1)
+	opt = AddDialogOption(node, "*uyti*", -1, -2, FLAG_FOUND_STEVE_BODY, 1)
+
+	node = CreateDialogNode(212, "Markus", "Prosti, drug. Ya dolzhen byl byt' zdes'. Ya...", "", "")
+	node\autoAdvanceTime = 140.0
+
+	node = CreateDialogNode(213, "[...]", "*za spinoy - shumok. Ili pokazalos'?*", "", "")
+	node\autoAdvanceTime = 70.0
+
+	; --- ГОЛОС СТИВА (939 ЛОВУШКА) ---
+	; ID 220-229
+
+	node = CreateDialogNode(220, "[???]", "*golos Stiva, iz koridora* ...Markus? Ty... zhiv? Idi... syuda...", "", "")
+	opt = AddDialogOption(node, "Steve?! Ty zhiv?!", 221, 0, FLAG_HEARD_939_MIMIC, 1)
+	opt = AddDialogOption(node, "*molchat' i slushchut'*", 222, 2, FLAG_HEARD_939_MIMIC, 1)
+	opt = AddDialogOption(node, "Eto ne Steve. Steve myortv.", 223, 3, FLAG_HEARD_939_MIMIC, 1)
+
+	node = CreateDialogNode(221, "[???]", "*golos priblizhaetsya* Da... pomoqgi mne... ya... ranyen...", "", "")
+	node\autoAdvanceTime = 105.0
+
+	node = CreateDialogNode(222, "Markus", "*dumaet* Etot golos... chto-to ne tak. Steve lezhal tam s slomqannoi sheey.", "", "")
+	node\autoAdvanceTime = 105.0
+
+	node = CreateDialogNode(223, "Markus", "*krichit v koridor* Kto by ty ni byl - ya znayu, chto ty ne Steve!", "", "")
+	node\autoAdvanceTime = 105.0
+
+	node = CreateDialogNode(224, "[...]", "*tishina. Potom - tikhii ryk iz temnoty. Shagi udalyayutsya.*", "", "")
+	node\autoAdvanceTime = 140.0
+
+	; --- КВЕСТ ХАРРИСОНА ---
+	; ID 230-249
+
+	node = CreateDialogNode(230, "[RADIO - nerazborchivo]", "*pomekhi* ...Harr...son... zona khran...niya... 079... algoritm... *pomekhi*", "", "")
+	node\autoAdvanceTime = 140.0
+
+	node = CreateDialogNode(231, "Markus", "Harrison? Doktor Harrison? On chto-to znal pro vsyo eto... Nado nayti yego.", "", "")
+	AddDialogOption(node, "[Iskat' zonu khraneniya]", -1, 0, -1, 0)
+
+	; --- ТРУП ХАРРИСОНА ---
+	; ID 240-249
+
+	node = CreateDialogNode(240, "Markus", "Harrison... *ogladyvaet telo* Vyglyadit kak... rasterzali. 939-ye?", "", "")
+	opt = AddDialogOption(node, "*obyskat' telo*", 241, 0, FLAG_FOUND_HARRISON_BODY, 1)
+	opt = AddDialogOption(node, "*uyti*", -1, 0, FLAG_FOUND_HARRISON_BODY, 1)
+
+	node = CreateDialogNode(241, "[...]", "*nahodite KPK i klyuch-kartu urovnya 4*", "", "")
+	AddDialogOption(node, "[Vziat' oba predmeta]", 242, 0, FLAG_COLLECTED_HARRISON_PDA, 1)
+
+	node = CreateDialogNode(242, "[KPK HARRISONA]", "ZAPIS' OT [REDACTED]: 'Zerkalo' aktivirovano. 079 kontroliruet dveri. Yesli chitat' eto - uzhe pozdno. Ishchite terminal O5 v Gate B.", "", "")
+	node\autoAdvanceTime = 280.0
+
+	node = CreateDialogNode(243, "Markus", "Zerkalo... 079... Gate B. Tak vot chto on imeл v vidu.", "", "")
+	AddDialogOption(node, "[Zapomnit' informatsiyu]", -1, 0, FLAG_079_INTEGRATION, 1)
+
+	; --- ECHO: FATA СТИВА ---
+	; ID 250-259
+
+	node = CreateDialogNode(250, "[...]", "*pered glazami mertsayet obraz - Steve, zhivoy, smeyotsya...*", "", "")
+	node\autoAdvanceTime = 105.0
+
+	node = CreateDialogNode(251, "Echo-Steve", "Ey, Markus! Segodnya vsyo budet normal'no, da?", "", "")
+	node\autoAdvanceTime = 105.0
+
+	node = CreateDialogNode(252, "[...]", "*obraz ischezayet*", "", "")
+	node\autoAdvanceTime = 70.0
+
+	node = CreateDialogNode(253, "Markus", "*tryasyot golovoy* Chto eto bylo... Prizrak? Net... prosto... pamjat'.", "", "")
+	AddDialogOption(node, "[Prodolzhit']", -1, 0, FLAG_SAW_ECHO_STEVE, 1)
+End Function
+
+Function SetupDay3Triggers()
+	Local trig.DialogTrigger
+
+	; dormy - probuzhdenie
+	trig = New DialogTrigger
+	trig\roomName = "room2dorm"
+	trig\dialogID = 200
+	trig\triggerRadius = 3.0
+	trig\oneShot = True
+	trig\triggered = False
+	trig\requiredDay = 3
+	trig\requiredFlag = -1
+
+	; komnata 173 - trup Stiva
+	trig = New DialogTrigger
+	trig\roomName = "173"
+	trig\dialogID = 210
+	trig\triggerRadius = 4.0
+	trig\oneShot = True
+	trig\triggered = False
+	trig\requiredDay = 3
+	trig\requiredFlag = FLAG_DORMS_VISITED
+	trig\requiredFlagValue = 1
+
+	; storage - trup Harrisona
+	trig = New DialogTrigger
+	trig\roomName = "room2storage"
+	trig\dialogID = 240
+	trig\triggerRadius = 3.0
+	trig\oneShot = True
+	trig\triggered = False
+	trig\requiredDay = 3
+	trig\requiredFlag = FLAG_FOUND_STEVE_BODY
+	trig\requiredFlagValue = 1
+End Function
+
+Function SetupDay3World()
+	If Day3Initialized Then Return
+
+	DebugLog "=== DAY 3 WORLD SETUP ==="
+
+	; aktivirovat' avariynoe osveshchenie
+	EmergencyLightingActive = True
+	EmergencyLightPhase = 0
+
+	; zvuk trevogi
+	Day3AlarmSFX = LoadSound("SFX\General\Alarm.ogg")
+	If Day3AlarmSFX <> 0 Then
+		Day3AlarmChannel = PlaySound(Day3AlarmSFX)
+		If Day3AlarmChannel <> 0 Then
+			ChannelVolume Day3AlarmChannel, 0.3
+		EndIf
+	EndIf
+
+	; spawn trupov
+	SpawnDay3Corpses()
+
+	; aktivirovat' 939 lovushku
+	Steve939TrapActive = True
+	Steve939TrapTriggered = False
+
+	Day3Initialized = True
+
+	DebugLog "Day 3 world setup complete"
+End Function
+
+Function SpawnDay3Corpses()
+	; trup Stiva u 173
+	Local room173.Rooms = Null
+	For r.Rooms = Each Rooms
+		If r\RoomTemplate <> Null Then
+			If r\RoomTemplate\Name = SteveCorpseRoom Then
+				room173 = r
+				Exit
+			EndIf
+		EndIf
+	Next
+
+	If room173 <> Null Then
+		Local sX# = EntityX(room173\obj) + 1.5
+		Local sY# = 0.1
+		Local sZ# = EntityZ(room173\obj) + 2.0
+
+		SteveCorpse = CreateNPC(NPCtypeGuard, sX, sY, sZ)
+		If SteveCorpse <> Null Then
+			; polozheniye "myortv"
+			RotateEntity SteveCorpse\Collider, 90.0, 0.0, 0.0
+			SteveCorpse\State = 6  ; dead state
+			DebugLog "Steve corpse spawned at 173"
+		EndIf
+
+		; D-klassy trupov ryadom
+		DClassCorpse1 = CreateNPC(NPCtypeDClass, sX - 2.0, sY, sZ + 1.0)
+		If DClassCorpse1 <> Null Then
+			RotateEntity DClassCorpse1\Collider, 90.0, 45.0, 0.0
+			DClassCorpse1\State = 6
+		EndIf
+
+		DClassCorpse2 = CreateNPC(NPCtypeDClass, sX + 1.0, sY, sZ - 1.5)
+		If DClassCorpse2 <> Null Then
+			RotateEntity DClassCorpse2\Collider, 90.0, -30.0, 0.0
+			DClassCorpse2\State = 6
+		EndIf
+	EndIf
+
+	; trup Harrisona v storage
+	Local roomStorage.Rooms = Null
+	For r.Rooms = Each Rooms
+		If r\RoomTemplate <> Null Then
+			If r\RoomTemplate\Name = HarrisonCorpseRoom Then
+				roomStorage = r
+				Exit
+			EndIf
+		EndIf
+	Next
+
+	If roomStorage <> Null Then
+		Local hX# = EntityX(roomStorage\obj)
+		Local hY# = 0.1
+		Local hZ# = EntityZ(roomStorage\obj) + 1.0
+
+		HarrisonCorpse = CreateNPC(NPCtypeDClass, hX, hY, hZ)  ; ispolzuem D-class model
+		If HarrisonCorpse <> Null Then
+			RotateEntity HarrisonCorpse\Collider, 90.0, 0.0, 0.0
+			HarrisonCorpse\State = 6
+
+			; spawn luta ryadom s telom
+			SpawnHarrisonLoot(hX, hY + 0.5, hZ + 0.5)
+
+			DebugLog "Harrison corpse spawned in storage"
+		EndIf
+	EndIf
+End Function
+
+Function SpawnHarrisonLoot(x#, y#, z#)
+	; KPK Harrisona
+	Local pda.Items = CreateItem("Harrison's PDA", "misc", x - 0.3, y, z)
+	If pda <> Null Then
+		HarrisonPDASpawned = True
+		DebugLog "Harrison PDA spawned"
+	EndIf
+
+	; Klyuch-karta urovnya 4
+	Local keycard.Items = CreateItem("Level 4 Key Card", "key4", x + 0.3, y, z)
+	If keycard <> Null Then
+		HarrisonKeycard4Spawned = True
+		DebugLog "Level 4 keycard spawned"
+	EndIf
+End Function
+
+Function UpdateEmergencyLighting()
+	If Not EmergencyLightingActive Then Return
+
+	EmergencyLightTimer = EmergencyLightTimer + FPSfactor
+
+	; miganie kazhdye 2 sekundy
+	If EmergencyLightTimer > 140.0 Then
+		EmergencyLightTimer = 0.0
+		EmergencyLightPhase = 1 - EmergencyLightPhase
+
+		; primenyaem krasnyi otttenok ko vsem svetil'nikam
+		UpdateRoomLighting(EmergencyLightPhase)
+	EndIf
+End Function
+
+Function UpdateRoomLighting(phase%)
+	; uproshchennaya versiya - menyaem AmbientLight
+	If phase = 0 Then
+		AmbientLight 40, 10, 10  ; tyomnyi krasnyi
+	Else
+		AmbientLight 80, 20, 20  ; svetlyi krasnyi
+	EndIf
+End Function
+
+Function Update939VoiceTrap()
+	If Not Steve939TrapActive Then Return
+	If Steve939TrapTriggered Then Return
+	If Not GetStoryFlag(FLAG_FOUND_STEVE_BODY) Then Return
+
+	; trigger cherez 10 sekund posle nahozhdeniya tela
+	Local trapDelay# = 700.0  ; 10 sec
+
+	; najti igroka
+	If PlayerRoom <> Null Then
+		If PlayerRoom\RoomTemplate <> Null Then
+			If Instr(PlayerRoom\RoomTemplate\Name, "173") > 0 Then
+				; igrok vsyo eshche u 173
+				Steve939TrapTriggered = True
+				StartDialog(220)
+
+				; soobshchit' 939 sisteme
+				Trigger939Mimicry("Steve")
+			EndIf
+		EndIf
+	EndIf
+End Function
+
+Function Trigger939Mimicry(voiceName$)
+	; hook dlya ProjectMirror_939.bb
+	; 939 nachinaet imitirovat' golos
+	DebugLog "939 mimicry triggered: " + voiceName
+End Function
+
+Function TriggerEchoAtSteveBody()
+	If GetStoryFlag(FLAG_SAW_ECHO_STEVE) Then Return
+
+	; hook dlya ProjectMirror_Echo.bb
+	StartDialog(250)
+
+	; soobshchit' Echo sisteme
+	TriggerEchoEvent("Steve", SteveCorpseRoom)
+End Function
+
+Function TriggerEchoEvent(characterName$, roomName$)
+	; hook dlya ProjectMirror_Echo.bb
+	DebugLog "Echo event triggered: " + characterName + " at " + roomName
+End Function
+
+Function CheckHarrisonPDAPickup(item.Items)
+	If item = Null Then Return
+
+	If item\Name = "Harrison's PDA" Then
+		SetStoryFlag(FLAG_COLLECTED_HARRISON_PDA, 1)
+		SetStoryFlag(FLAG_HARRISON_PDA, 1)
+		HasHarrisonPDA = True
+
+		; pokazat' soobshchenie
+		StartDialog(242)
+
+		; aktivirovat' 914 quest (hook)
+		On914QuestAdvance("harrison_pda")
+
+		DebugLog "Harrison PDA collected"
+	EndIf
+
+	If item\Name = "Level 4 Key Card" Then
+		SetStoryFlag(FLAG_COLLECTED_KEYCARD4, 1)
+		DebugLog "Level 4 keycard collected"
+	EndIf
+End Function
+
+Function On914QuestAdvance(questItem$)
+	; hook dlya ProjectMirror_914.bb
+	DebugLog "914 quest advance: " + questItem
+End Function
+
+Function StartDay3Intro()
+	If CurrentDay <> 3 Then Return
+	If GetStoryFlag(FLAG_DAY3_STARTED) Then Return
+
+	SetStoryFlag(FLAG_DAY3_STARTED, 1)
+
+	; setup mira
+	SetupDay3World()
+
+	; spawn v dormah
+	SpawnPlayerDay3()
+
+	; dialog probuzhdeniya
+	StartDialog(200)
+
+	DebugLog "Day 3 started"
+End Function
+
+Function SpawnPlayerDay3()
+	Local spawnRoom.Rooms = Null
+
+	For r.Rooms = Each Rooms
+		If r\RoomTemplate <> Null Then
+			If Instr(r\RoomTemplate\Name, "dorm") > 0 Then
+				spawnRoom = r
+				Exit
+			EndIf
+		EndIf
+	Next
+
+	If spawnRoom <> Null Then
+		Local spawnX# = EntityX(spawnRoom\obj)
+		Local spawnY# = 0.5
+		Local spawnZ# = EntityZ(spawnRoom\obj)
+
+		PositionEntity Collider, spawnX, spawnY, spawnZ
+		ResetEntity Collider
+		PlayerRoom = spawnRoom
+
+		DebugLog "Day 3 spawn at dorms"
+	Else
+		DebugLog "WARNING: dorm room not found for Day 3 spawn"
+	EndIf
+End Function
+
+Function UpdateDay3Logic()
+	If CurrentDay <> 3 Then Return
+
+	; init dnya 3
+	If Not GetStoryFlag(FLAG_DAY3_STARTED) Then
+		StartDay3Intro()
+	EndIf
+
+	; avariynoe osveshchenie
+	UpdateEmergencyLighting()
+
+	; 939 lovushka
+	Update939VoiceTrap()
+
+	; echo pri tele Stiva
+	If GetStoryFlag(FLAG_FOUND_STEVE_BODY) And Not GetStoryFlag(FLAG_SAW_ECHO_STEVE) Then
+		; 5 sekund posle nahozhdeniya - trigger echo
+		TriggerEchoAtSteveBody()
+	EndIf
+
+	; subtitry
+	UpdateSubtitles()
+End Function
+
+Function CleanupDay3()
+	If SteveCorpse <> Null Then
+		RemoveNPC(SteveCorpse)
+		SteveCorpse = Null
+	EndIf
+
+	If HarrisonCorpse <> Null Then
+		RemoveNPC(HarrisonCorpse)
+		HarrisonCorpse = Null
+	EndIf
+
+	If DClassCorpse1 <> Null Then
+		RemoveNPC(DClassCorpse1)
+		DClassCorpse1 = Null
+	EndIf
+
+	If DClassCorpse2 <> Null Then
+		RemoveNPC(DClassCorpse2)
+		DClassCorpse2 = Null
+	EndIf
+
+	If Day3AlarmChannel <> 0 Then
+		StopChannel Day3AlarmChannel
+		Day3AlarmChannel = 0
+	EndIf
+
+	Day3Initialized = False
+	EmergencyLightingActive = False
+
+	DebugLog "Day 3 cleanup complete"
 End Function

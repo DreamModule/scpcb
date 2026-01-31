@@ -193,6 +193,9 @@ Function UpdateProjectMirror()
 
 		; день 2 - катсцена у 173
 		UpdateDay2Logic()
+
+		; день 3 - катастрофа
+		UpdateDay3Logic()
 	EndIf
 
 	; эхо система (день 3)
@@ -320,6 +323,11 @@ Function OnMirrorItemPickup(item.Items)
 	If Mirror914SystemEnabled Then
 		OnItemPickedUp(item)
 	EndIf
+
+	; Day 3: proverka PDA Harrisona
+	If MirrorStoryEnabled And CurrentDay = 3 Then
+		CheckHarrisonPDAPickup(item)
+	EndIf
 End Function
 
 Function OnMirror914Use%(item.Items, setting$, x#, y#, z#)
@@ -434,6 +442,9 @@ Function RenderMirrorDebug()
 	If GetStoryFlag(FLAG_HARRISON_PDA) Then flagsStr = flagsStr + "HP "
 	If GetStoryFlag(FLAG_O5_CARD_OBTAINED) Then flagsStr = flagsStr + "O5 "
 	If GetStoryFlag(FLAG_BREACH_STARTED) Then flagsStr = flagsStr + "BREACH "
+	If GetStoryFlag(FLAG_DAY3_STARTED) Then flagsStr = flagsStr + "D3 "
+	If GetStoryFlag(FLAG_FOUND_STEVE_BODY) Then flagsStr = flagsStr + "FSB "
+	If GetStoryFlag(FLAG_HEARD_939_MIMIC) Then flagsStr = flagsStr + "939M "
 
 	Text 10, 565, "Flags: " + flagsStr
 End Function
