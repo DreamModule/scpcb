@@ -1387,7 +1387,7 @@ Function SpawnDay2Actors(room.Rooms)
 	EndIf
 
 	; D-Class 1
-	Local d1NPC.NPCs = CreateNPC(NPCtypeDClass, baseX - 0.5, baseY, baseZ)
+	Local d1NPC.NPCs = CreateNPC(NPCtypeD, baseX - 0.5, baseY, baseZ)
 	If d1NPC <> Null Then
 		SceneDClass1 = New SceneActor
 		SceneDClass1\npc = d1NPC
@@ -1397,7 +1397,7 @@ Function SpawnDay2Actors(room.Rooms)
 	EndIf
 
 	; D-Class 2
-	Local d2NPC.NPCs = CreateNPC(NPCtypeDClass, baseX + 0.5, baseY, baseZ)
+	Local d2NPC.NPCs = CreateNPC(NPCtypeD, baseX + 0.5, baseY, baseZ)
 	If d2NPC <> Null Then
 		SceneDClass2 = New SceneActor
 		SceneDClass2\npc = d2NPC
@@ -1407,7 +1407,7 @@ Function SpawnDay2Actors(room.Rooms)
 	EndIf
 
 	; D-9341 - glavnyi geroy originala
-	Local d9341NPC.NPCs = CreateNPC(NPCtypeDClass, baseX, baseY, baseZ + 0.5)
+	Local d9341NPC.NPCs = CreateNPC(NPCtypeD, baseX, baseY, baseZ + 0.5)
 	If d9341NPC <> Null Then
 		SceneDClass9341 = New SceneActor
 		SceneDClass9341\npc = d9341NPC
@@ -2314,13 +2314,13 @@ Function SpawnDay3Corpses()
 		EndIf
 
 		; D-klassy trupov ryadom
-		DClassCorpse1 = CreateNPC(NPCtypeDClass, sX - 2.0, sY, sZ + 1.0)
+		DClassCorpse1 = CreateNPC(NPCtypeD, sX - 2.0, sY, sZ + 1.0)
 		If DClassCorpse1 <> Null Then
 			RotateEntity DClassCorpse1\Collider, 90.0, 45.0, 0.0
 			DClassCorpse1\State = 6
 		EndIf
 
-		DClassCorpse2 = CreateNPC(NPCtypeDClass, sX + 1.0, sY, sZ - 1.5)
+		DClassCorpse2 = CreateNPC(NPCtypeD, sX + 1.0, sY, sZ - 1.5)
 		If DClassCorpse2 <> Null Then
 			RotateEntity DClassCorpse2\Collider, 90.0, -30.0, 0.0
 			DClassCorpse2\State = 6
@@ -2343,7 +2343,7 @@ Function SpawnDay3Corpses()
 		Local hY# = 0.1
 		Local hZ# = EntityZ(roomStorage\obj) + 1.0
 
-		HarrisonCorpse = CreateNPC(NPCtypeDClass, hX, hY, hZ)  ; ispolzuem D-class model
+		HarrisonCorpse = CreateNPC(NPCtypeD, hX, hY, hZ)  ; ispolzuem D-class model
 		If HarrisonCorpse <> Null Then
 			RotateEntity HarrisonCorpse\Collider, 90.0, 0.0, 0.0
 			HarrisonCorpse\State = 6

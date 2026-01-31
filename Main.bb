@@ -31,9 +31,6 @@ Include "Update.bb"
 
 Include "DevilParticleSystem.bb"
 
-; Project Mirror - SCP: СТОРОЖ mod
-Include "ProjectMirror_Core.bb"
-
 Global ErrorFile$ = "error_log_"
 Local ErrorFileInd% = 0
 While FileType(ErrorFile+Str(ErrorFileInd)+".txt")<>0
@@ -2432,6 +2429,9 @@ Include "MapSystem.bb"
 DrawLoading(80,True)
 
 Include "NPCs.bb"
+
+; Project Mirror - SCP: СТОРОЖ mod (must be after Items.bb, MapSystem.bb, NPCs.bb)
+Include "ProjectMirror_Core.bb"
 
 ;-------------------------------------  Events --------------------------------------------------------------
 

@@ -63,7 +63,13 @@ End Type
 Type MTFFoxSquad
 	Field id%
 	Field leader.MTFFoxState
-	Field members.MTFFoxState[MTF_FOX_MAX_SQUAD]
+	; members array replaced with individual fields (Blitz3D limitation)
+	Field member0.MTFFoxState
+	Field member1.MTFFoxState
+	Field member2.MTFFoxState
+	Field member3.MTFFoxState
+	Field member4.MTFFoxState
+	Field member5.MTFFoxState
 	Field memberCount%
 	Field alertLevel%
 	Field playerLastKnownX#
@@ -75,6 +81,32 @@ Type MTFFoxSquad
 	Field flashbangUser.MTFFoxState
 	Field breachTarget.Doors
 End Type
+
+; Helper functions for squad member access (Blitz3D can't use arrays in Types)
+Function GetSquadMember.MTFFoxState(squad.MTFFoxSquad, idx%)
+	If squad = Null Then Return Null
+	Select idx
+		Case 0: Return squad\member0
+		Case 1: Return squad\member1
+		Case 2: Return squad\member2
+		Case 3: Return squad\member3
+		Case 4: Return squad\member4
+		Case 5: Return squad\member5
+	End Select
+	Return Null
+End Function
+
+Function SetSquadMember(squad.MTFFoxSquad, idx%, fox.MTFFoxState)
+	If squad = Null Then Return
+	Select idx
+		Case 0: squad\member0 = fox
+		Case 1: squad\member1 = fox
+		Case 2: squad\member2 = fox
+		Case 3: squad\member3 = fox
+		Case 4: squad\member4 = fox
+		Case 5: squad\member5 = fox
+	End Select
+End Function
 
 ; Глобалы
 Global FoxTacticsEnabled% = True
@@ -133,7 +165,7 @@ Function CreateFoxSquad.MTFFoxSquad()
 	squad\leader = Null
 
 	For i% = 0 To MTF_FOX_MAX_SQUAD - 1
-		squad\members[i] = Null
+		SetSquadMember(squad, i, Null)
 	Next
 
 	FoxSquads(FoxSquadCount) = squad
@@ -162,7 +194,7 @@ Function AddFoxToSquad(squad.MTFFoxSquad, n.NPCs, role%)
 	fox\playerInShadow = False
 	fox\coverPoint = CreatePivot()
 
-	squad\members[squad\memberCount] = fox
+	SetSquadMember(squad, squad\memberCount, fox)
 	squad\memberCount = squad\memberCount + 1
 
 	If role = FOX_ROLE_LEADER Or squad\leader = Null Then
@@ -173,8 +205,9 @@ End Function
 Function GetFoxState.MTFFoxState(n.NPCs)
 	For squad.MTFFoxSquad = Each MTFFoxSquad
 		For i% = 0 To squad\memberCount - 1
-			If squad\members[i] <> Null Then
-				If squad\members[i]\npcRef = n Then Return squad\members[i]
+			Local memberCheck.MTFFoxState = GetSquadMember(squad, i)
+			If memberCheck <> Null Then
+				If memberCheck\npcRef = n Then Return memberCheck
 			EndIf
 		Next
 	Next
@@ -203,7 +236,7 @@ Function UpdateFoxSquad(squad.MTFFoxSquad)
 	Local closestDistSq# = 100000.0
 
 	For i% = 0 To squad\memberCount - 1
-		Local fox.MTFFoxState = squad\members[i]
+		Local fox.MTFFoxState = GetSquadMember(squad, i)
 		If fox = Null Then Continue
 		If fox\npcRef = Null Then Continue
 
@@ -459,7 +492,7 @@ Function InitiateEngagement(squad.MTFFoxSquad)
 	Local flankerRAssigned% = False
 
 	For i% = 0 To squad\memberCount - 1
-		Local fox.MTFFoxState = squad\members[i]
+		Local fox.MTFFoxState = GetSquadMember(squad, i)
 		If fox = Null Then Continue
 		If fox\role = FOX_ROLE_FLANKER_L Then flankerLAssigned = True
 		If fox\role = FOX_ROLE_FLANKER_R Then flankerRAssigned = True
@@ -468,7 +501,7 @@ Function InitiateEngagement(squad.MTFFoxSquad)
 	If (Not flankerLAssigned) Or (Not flankerRAssigned) Then
 		Local assigned% = 0
 		For i% = 0 To squad\memberCount - 1
-			Local fox.MTFFoxState = squad\members[i]
+			Local fox.MTFFoxState = GetSquadMember(squad, i)
 			If fox = Null Then Continue
 			If fox = squad\leader Then Continue
 
@@ -485,7 +518,7 @@ Function InitiateEngagement(squad.MTFFoxSquad)
 	EndIf
 
 	For i% = 0 To squad\memberCount - 1
-		Local fox.MTFFoxState = squad\members[i]
+		Local fox.MTFFoxState = GetSquadMember(squad, i)
 		If fox <> Null Then
 			fox\tacticalState = FOX_STATE_ALERT
 			fox\stateTimer = 0.0
@@ -510,7 +543,7 @@ Function SignalSquad(squad.MTFFoxSquad, spotter.MTFFoxState)
 	If squad = Null Then Return
 
 	For i% = 0 To squad\memberCount - 1
-		Local fox.MTFFoxState = squad\members[i]
+		Local fox.MTFFoxState = GetSquadMember(squad, i)
 		If fox <> Null And fox <> spotter Then
 			If fox\tacticalState = FOX_STATE_PATROL Then
 				fox\tacticalState = FOX_STATE_ALERT
@@ -836,7 +869,7 @@ Function DebugFoxTactics()
 		y = y + 15
 
 		For i% = 0 To squad\memberCount - 1
-			Local fox.MTFFoxState = squad\members[i]
+			Local fox.MTFFoxState = GetSquadMember(squad, i)
 			If fox <> Null Then
 				Local stateName$ = GetFoxStateName(fox\tacticalState)
 				Local roleName$ = GetFoxRoleName(fox\role)

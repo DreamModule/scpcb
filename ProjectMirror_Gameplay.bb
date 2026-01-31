@@ -355,7 +355,7 @@ End Function
 Function TeslaGateKillNPCsInRoom(roomName$)
 	; ubivaem vsekh NPC v komnate s tesla gate
 	For n.NPCs = Each NPCs
-		If n\NPCtype = NPCtype0492 Or n\NPCtype = NPCtypeMTF Then
+		If n\NPCtype = NPCtypeZombie Or n\NPCtype = NPCtypeMTF Then
 			; proveryaem nahoditsya li v komnate
 			For r.Rooms = Each Rooms
 				If r\RoomTemplate <> Null Then

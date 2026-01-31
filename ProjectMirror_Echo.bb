@@ -22,8 +22,8 @@ Type EchoEvent
 	Field triggerRoomName$
 	Field triggerX#, triggerY#, triggerZ#
 	Field triggerRadiusSq#
-	Field requiredFlags%[4]
-	Field requiredFlagValues%[4]
+	Field requiredFlag0%, requiredFlag1%, requiredFlag2%, requiredFlag3%
+	Field requiredFlagVal0%, requiredFlagVal1%, requiredFlagVal2%, requiredFlagVal3%
 	Field requiredFlagCount%
 	Field phantomModelPath$
 	Field phantomScale#
@@ -33,7 +33,7 @@ Type EchoEvent
 	Field phantomMoveTarget%
 	Field phantomTargetX#, phantomTargetY#, phantomTargetZ#
 	Field baseAlpha#
-	Field glowColor%[3]
+	Field glowR%, glowG%, glowB%
 	Field particleType%
 	Field soundPath$
 	Field soundVolume#
@@ -126,9 +126,9 @@ Function CreateEchoEvent.EchoEvent(id%, sourceDay%, roomName$, localX#, localY#,
 	e\phantomAnimSpeed = 1.0
 	e\phantomMoveTarget = False
 	e\baseAlpha = 0.5
-	e\glowColor[0] = 100
-	e\glowColor[1] = 150
-	e\glowColor[2] = 255
+	e\glowR = 100
+	e\glowG = 150
+	e\glowB = 255
 	e\particleType = 0
 	e\soundVolume = 0.7
 	e\soundLoop = False
@@ -178,9 +178,9 @@ End Function
 Function SetEchoVisuals(e.EchoEvent, alpha#, glowR%, glowG%, glowB%)
 	If e = Null Then Return
 	e\baseAlpha = alpha
-	e\glowColor[0] = glowR
-	e\glowColor[1] = glowG
-	e\glowColor[2] = glowB
+	e\glowR = glowR
+	e\glowG = glowG
+	e\glowB = glowB
 End Function
 
 Function SetEchoDuration(e.EchoEvent, spawnFrames#, activeFrames#, fadeFrames#)
@@ -193,9 +193,33 @@ End Function
 Function AddEchoRequirement(e.EchoEvent, flagIndex%, flagValue%)
 	If e = Null Then Return
 	If e\requiredFlagCount >= 4 Then Return
-	e\requiredFlags[e\requiredFlagCount] = flagIndex
-	e\requiredFlagValues[e\requiredFlagCount] = flagValue
+	Select e\requiredFlagCount
+		Case 0: e\requiredFlag0 = flagIndex : e\requiredFlagVal0 = flagValue
+		Case 1: e\requiredFlag1 = flagIndex : e\requiredFlagVal1 = flagValue
+		Case 2: e\requiredFlag2 = flagIndex : e\requiredFlagVal2 = flagValue
+		Case 3: e\requiredFlag3 = flagIndex : e\requiredFlagVal3 = flagValue
+	End Select
 	e\requiredFlagCount = e\requiredFlagCount + 1
+End Function
+
+Function GetEchoRequiredFlag%(e.EchoEvent, idx%)
+	Select idx
+		Case 0: Return e\requiredFlag0
+		Case 1: Return e\requiredFlag1
+		Case 2: Return e\requiredFlag2
+		Case 3: Return e\requiredFlag3
+	End Select
+	Return 0
+End Function
+
+Function GetEchoRequiredFlagVal%(e.EchoEvent, idx%)
+	Select idx
+		Case 0: Return e\requiredFlagVal0
+		Case 1: Return e\requiredFlagVal1
+		Case 2: Return e\requiredFlagVal2
+		Case 3: Return e\requiredFlagVal3
+	End Select
+	Return 0
 End Function
 
 Function LinkEchoToRecord(e.EchoEvent, recordDay%, recordRoom$)
@@ -305,7 +329,7 @@ Function UpdateEchoEvents()
 
 		Local flagsOk% = True
 		For f% = 0 To e\requiredFlagCount - 1
-			If GetStoryFlag(e\requiredFlags[f]) <> e\requiredFlagValues[f] Then
+			If GetStoryFlag(GetEchoRequiredFlag(e, f)) <> GetEchoRequiredFlagVal(e, f) Then
 				flagsOk = False
 				Exit
 			EndIf
@@ -381,7 +405,7 @@ Function SpawnEcho(e.EchoEvent, room.Rooms)
 		SpriteViewMode echo\glowSprite, 1
 		EntityFX echo\glowSprite, 1
 		EntityAlpha echo\glowSprite, 0.0
-		EntityColor echo\glowSprite, e\glowColor[0], e\glowColor[1], e\glowColor[2]
+		EntityColor echo\glowSprite, e\glowR, e\glowG, e\glowB
 		PositionEntity echo\glowSprite, 0, 0.8, 0
 	EndIf
 
