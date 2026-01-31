@@ -48,7 +48,7 @@ Global PhantomFadeDir% = 0
 ; textures
 Global VFXNoiseTexture% = 0
 Global VFXVignetteTexture% = 0
-Global VFXStaticFrames%[8]
+Dim VFXStaticFrames%(8)
 
 Function InitVFXSystem()
 	; sozdaem tekstury dlya effectov

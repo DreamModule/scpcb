@@ -26,8 +26,8 @@ Global ObjectiveSubtext$ = ""
 Global ObjectiveTimer# = 0.0
 
 ; notification
-Global NotificationQueue$[8]
-Global NotificationTimers#[8]
+Dim NotificationQueue$(8)
+Dim NotificationTimers#(8)
 Global NotificationCount% = 0
 
 ; interaction prompt

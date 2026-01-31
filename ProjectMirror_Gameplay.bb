@@ -50,7 +50,7 @@ Global MTFAlertLevel# = 0.0
 
 ; === LOCKDOWN SYSTEM ===
 Global FacilityLockdown% = False
-Global LockedSectors%[8]
+Dim LockedSectors%(8)
 
 Function InitGameplayMechanics()
 	PlayerCrouching = False

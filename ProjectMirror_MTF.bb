@@ -128,7 +128,7 @@ Global PlayerCoverEntity% = 0
 ; Звуки
 Global FlashbangSFX% = 0
 Global FlashbangRingSFX% = 0
-Global TacticalRadioSFX%[4]
+Dim TacticalRadioSFX%(4)
 
 Dim FoxSquads.MTFFoxSquad(4)
 
