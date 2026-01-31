@@ -7,9 +7,13 @@ Include "ProjectMirror_Echo.bb"
 Include "ProjectMirror_939.bb"
 Include "ProjectMirror_914.bb"
 Include "ProjectMirror_MTF.bb"
+Include "ProjectMirror_VFX.bb"
+Include "ProjectMirror_Cutscene.bb"
+Include "ProjectMirror_UI.bb"
+Include "ProjectMirror_Gameplay.bb"
 
-Const MIRROR_VERSION$ = "1.0.0"
-Const MIRROR_BUILD% = 20240115
+Const MIRROR_VERSION$ = "2.0.0"
+Const MIRROR_BUILD% = 20260131
 Const MIRROR_CODENAME$ = "STOROZH"
 
 Global ProjectMirrorInitialized% = False
@@ -27,6 +31,10 @@ Global MirrorEchoEnabled% = True
 Global Mirror939Enabled% = True
 Global Mirror914SystemEnabled% = True
 Global MirrorMTFEnabled% = True
+Global MirrorVFXEnabled% = True
+Global MirrorCutsceneEnabled% = True
+Global MirrorUIEnabled% = True
+Global MirrorGameplayEnabled% = True
 
 ; спавн охранника
 Global MirrorSpawnRoom$ = "room2cafeteria"
@@ -68,6 +76,30 @@ Function InitProjectMirror()
 	If MirrorMTFEnabled Then
 		DebugLog "MTF tactics..."
 		InitFoxTactics()
+	EndIf
+
+	; 6. VFX System
+	If MirrorVFXEnabled Then
+		DebugLog "VFX system..."
+		InitVFXSystem()
+	EndIf
+
+	; 7. Cutscene System
+	If MirrorCutsceneEnabled Then
+		DebugLog "Cutscene system..."
+		InitCutsceneSystem()
+	EndIf
+
+	; 8. UI System
+	If MirrorUIEnabled Then
+		DebugLog "UI system..."
+		InitMirrorUI()
+	EndIf
+
+	; 9. Gameplay Mechanics
+	If MirrorGameplayEnabled Then
+		DebugLog "Gameplay mechanics..."
+		InitGameplayMechanics()
 	EndIf
 
 	; --- СПАВН ОХРАННИКА ---
@@ -217,8 +249,79 @@ Function UpdateProjectMirror()
 		UpdateFoxTactics()
 	EndIf
 
+	; VFX
+	If MirrorVFXEnabled Then
+		UpdateVFXSystem()
+	EndIf
+
+	; Cutscenes
+	If MirrorCutsceneEnabled Then
+		UpdateCutsceneSystem()
+	EndIf
+
+	; UI
+	If MirrorUIEnabled Then
+		UpdateMirrorUI()
+	EndIf
+
+	; Gameplay mechanics (stealth, 096, nuke)
+	If MirrorGameplayEnabled Then
+		UpdateGameplayMechanics()
+
+		; warhead console interaction
+		If CurrentAct = ACT_FINALE Then
+			CheckWarheadConsoleInteraction()
+		EndIf
+	EndIf
+
+	; Act title display on act change
+	If MirrorUIEnabled And MirrorStoryEnabled Then
+		CheckActTitleDisplay()
+	EndIf
+
 	MirrorUpdateTime = MilliSecs() - startTime
 	MirrorFrameCount = MirrorFrameCount + 1
+End Function
+
+; pokazyvaem zagolovok akta pri smene
+Global LastDisplayedAct% = 0
+
+Function CheckActTitleDisplay()
+	If CurrentDay <> 3 Then Return
+	If CurrentAct = LastDisplayedAct Then Return
+
+	LastDisplayedAct = CurrentAct
+
+	Local title$ = ""
+	Local subtitle$ = ""
+
+	Select CurrentAct
+		Case ACT_AWAKENING
+			title = "AKT I"
+			subtitle = "PROBUZHDENIE V MOGILE"
+		Case ACT_ECHO
+			title = "AKT II"
+			subtitle = "EKHO PROSHLOGO"
+		Case ACT_VOICES
+			title = "AKT III"
+			subtitle = "GOLOSA DRUZEI"
+		Case ACT_MACHINE
+			title = "AKT IV"
+			subtitle = "MASHINA I CHUMA"
+		Case ACT_FLOOR
+			title = "AKT V"
+			subtitle = "SMOTRI V POL"
+		Case ACT_SURFACE
+			title = "AKT VI"
+			subtitle = "POVERKHNOST'"
+		Case ACT_FINALE
+			title = "AKT VII"
+			subtitle = "FINAL"
+	End Select
+
+	If title <> "" Then
+		ShowActTitle(CurrentAct, title, subtitle)
+	EndIf
 End Function
 
 Function RenderProjectMirror()
@@ -226,6 +329,11 @@ Function RenderProjectMirror()
 	If Not ProjectMirrorEnabled Then Return
 
 	Local startTime% = MilliSecs()
+
+	; === VFX (первый слой) ===
+	If MirrorVFXEnabled Then
+		RenderVFXSystem()
+	EndIf
 
 	; оверлей перехода дня
 	If MirrorStoryEnabled Then
@@ -249,6 +357,21 @@ Function RenderProjectMirror()
 		RenderFlashbangEffect()
 	EndIf
 
+	; === UI (верхний слой) ===
+	If MirrorUIEnabled Then
+		RenderMirrorUI()
+	EndIf
+
+	; === Nuke countdown ===
+	If MirrorGameplayEnabled And NukeCountdownActive Then
+		RenderNukeCountdown()
+	EndIf
+
+	; === Nuke sequence ===
+	If MirrorVFXEnabled And NukeSequenceActive Then
+		RenderNukeSequence()
+	EndIf
+
 	; дебаг оверлей
 	If ProjectMirrorDebugMode Then
 		RenderMirrorDebug()
@@ -257,11 +380,37 @@ Function RenderProjectMirror()
 	MirrorRenderTime = MilliSecs() - startTime
 End Function
 
+Function RenderNukeCountdown()
+	Local gw% = GraphicsWidth()
+	Local gh% = GraphicsHeight()
+
+	Local countStr$ = GetNukeCountdownString()
+	If countStr = "" Then Return
+
+	; bol'shoi taimer v tsentre verkha
+	Color 255, 50, 50
+
+	Local tw% = StringWidth(countStr) * 2  ; uvеlichennyy
+	Text gw / 2 - tw / 2, 30, countStr
+
+	; migayushchee OPASNOST'
+	If (MilliSecs() / 500) Mod 2 = 0 Then
+		Color 255, 0, 0
+		Local warn$ = "!!! BOEGOLOVKA AKTIVIROVANA !!!"
+		tw = StringWidth(warn)
+		Text gw / 2 - tw / 2, 60, warn
+	EndIf
+End Function
+
 Function CleanupProjectMirror()
 	If Not ProjectMirrorInitialized Then Return
 
 	DebugLog "=== MIRROR CLEANUP ==="
 
+	If MirrorGameplayEnabled Then CleanupGameplayMechanics()
+	If MirrorUIEnabled Then CleanupMirrorUI()
+	If MirrorCutsceneEnabled Then CleanupCutsceneSystem()
+	If MirrorVFXEnabled Then CleanupVFXSystem()
 	If MirrorMTFEnabled Then CleanupFoxTactics()
 	If Mirror914SystemEnabled Then Cleanup914System()
 	If Mirror939Enabled Then CleanupVoiceMimicrySystem()
@@ -422,9 +571,9 @@ End Function
 
 Function RenderMirrorDebug()
 	Color 255, 255, 255
-	Text 10, 500, "=== MIRROR v" + MIRROR_VERSION + " ==="
-	Text 10, 515, "Update: " + MirrorUpdateTime + "ms  Render: " + MirrorRenderTime + "ms"
-	Text 10, 530, "Frame: " + MirrorFrameCount
+	Text 10, 400, "=== MIRROR v" + MIRROR_VERSION + " ==="
+	Text 10, 415, "Update: " + MirrorUpdateTime + "ms  Render: " + MirrorRenderTime + "ms"
+	Text 10, 430, "Frame: " + MirrorFrameCount
 
 	If KeyHit(2) Then DebugStoryState()
 	If KeyHit(3) Then DebugEchoSystem()
@@ -433,20 +582,48 @@ Function RenderMirrorDebug()
 	If KeyHit(6) Then DebugFoxTactics()
 
 	Color 200, 200, 0
-	Text 10, 550, "Day: " + CurrentDay + "  Karma: " + CurrentKarma + "  Branch: " + GetBranchName(StoryBranch)
+	Text 10, 450, "Day: " + CurrentDay + "  Karma: " + CurrentKarma + "  Branch: " + GetBranchName(StoryBranch)
 
+	; Day 3 specific
+	If CurrentDay = 3 Then
+		Color 255, 100, 100
+		Text 10, 465, "ACT: " + GetActName(CurrentAct) + " (" + CurrentAct + ")"
+		Text 10, 480, "Sanity: " + PlayerSanity + "% (Lvl " + GetSanityLevel() + ")"
+
+		; gameplay states
+		Color 200, 150, 50
+		Local stealthStr$ = "Crouch:" + PlayerCrouching + " Noise:" + Int(PlayerNoiseLevel * 100) + "%"
+		Text 10, 495, stealthStr
+
+		If NukeCountdownActive Then
+			Color 255, 50, 50
+			Text 10, 510, "NUKE: " + GetNukeCountdownString()
+		EndIf
+
+		If SCP096Enraged Then
+			Color 255, 0, 0
+			Text 10, 525, "096 ENRAGED!"
+		EndIf
+	EndIf
+
+	; flags
+	Color 150, 150, 150
 	Local flagsStr$ = ""
 	If GetStoryFlag(FLAG_STEVE_MET) Then flagsStr = flagsStr + "SM "
 	If GetStoryFlag(FLAG_STEVE_DEAD) Then flagsStr = flagsStr + "SD "
-	If GetStoryFlag(FLAG_STEVE_SAVED) Then flagsStr = flagsStr + "SS "
 	If GetStoryFlag(FLAG_HARRISON_PDA) Then flagsStr = flagsStr + "HP "
-	If GetStoryFlag(FLAG_O5_CARD_OBTAINED) Then flagsStr = flagsStr + "O5 "
-	If GetStoryFlag(FLAG_BREACH_STARTED) Then flagsStr = flagsStr + "BREACH "
+	If GetStoryFlag(FLAG_ACT4_UPGRADED_CARD) Then flagsStr = flagsStr + "O5 "
 	If GetStoryFlag(FLAG_DAY3_STARTED) Then flagsStr = flagsStr + "D3 "
-	If GetStoryFlag(FLAG_FOUND_STEVE_BODY) Then flagsStr = flagsStr + "FSB "
-	If GetStoryFlag(FLAG_HEARD_939_MIMIC) Then flagsStr = flagsStr + "939M "
+	If GetStoryFlag(FLAG_ACT6_MTF_BETRAYAL) Then flagsStr = flagsStr + "BETRAY "
+	If GetStoryFlag(FLAG_NUKE_ACTIVATED) Then flagsStr = flagsStr + "NUKE "
 
-	Text 10, 565, "Flags: " + flagsStr
+	Text 10, 545, "Flags: " + flagsStr
+
+	; cutscene
+	If CutsceneActive Then
+		Color 100, 200, 100
+		Text 10, 560, "CUTSCENE: " + CutsceneID + " Timer:" + Int(CutsceneTimer)
+	EndIf
 End Function
 
 Function ToggleMirrorDebug()
@@ -538,7 +715,70 @@ Function ProcessMirrorCommand%(cmd$)
 		Return True
 	EndIf
 
+	If parts = "mirror_nuke" Then
+		ArmNuke()
+		Return True
+	EndIf
+
+	If Left$(parts, 10) = "mirror_act" Then
+		Local actStr$ = Trim$(Mid$(parts, 11))
+		Local newAct% = Int(actStr)
+		ForceActChange(newAct)
+		Return True
+	EndIf
+
+	If Left$(parts, 13) = "mirror_sanity" Then
+		Local sanStr$ = Trim$(Mid$(parts, 14))
+		PlayerSanity = Int(sanStr)
+		Return True
+	EndIf
+
+	If Left$(parts, 13) = "mirror_ending" Then
+		Local endStr$ = Trim$(Mid$(parts, 14))
+		TriggerEnding(Int(endStr))
+		Return True
+	EndIf
+
+	If parts = "mirror_096" Then
+		Trigger096Rage()
+		Return True
+	EndIf
+
+	If parts = "mirror_mtf_betray" Then
+		TriggerMTFBetrayal()
+		Return True
+	EndIf
+
+	If parts = "mirror_lockdown" Then
+		LockdownAllSectors()
+		Return True
+	EndIf
+
 	Return False
+End Function
+
+Function ForceActChange(act%)
+	If act < 1 Or act > 7 Then Return
+
+	CurrentAct = act
+
+	; ustanavlivaem sootvetstvuyushchie flagi
+	Select act
+		Case ACT_ECHO
+			SetStoryFlag(FLAG_ACT1_RADIO_LOOP, 1)
+		Case ACT_VOICES
+			SetStoryFlag(FLAG_ACT2_HEARD_STEVE_LAST, 1)
+		Case ACT_MACHINE
+			SetStoryFlag(FLAG_ACT3_READ_MIRROR_LOG, 1)
+		Case ACT_FLOOR
+			SetStoryFlag(FLAG_ACT4_UPGRADED_CARD, 1)
+		Case ACT_SURFACE
+			SetStoryFlag(FLAG_ACT5_ELEVATOR_ESCAPE, 1)
+		Case ACT_FINALE
+			SetStoryFlag(FLAG_ACT6_MTF_BETRAYAL, 1)
+	End Select
+
+	ShowActTitle(act, "AKT " + act, GetActName(act))
 End Function
 
 Function SetupMTFFoxSquad()
