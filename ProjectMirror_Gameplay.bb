@@ -364,7 +364,7 @@ Function TeslaGateKillNPCsInRoom(roomName$)
 						If dist < 5.0 Then
 							; kill
 							n\State = 6  ; dead
-							n\Health = 0
+							n\IsDead = True
 
 							DebugLog "Tesla gate killed: " + n\NPCtype
 						EndIf
@@ -452,7 +452,7 @@ Function TriggerNukeDetonation()
 	; kill all
 	For n.NPCs = Each NPCs
 		n\State = 6
-		n\Health = 0
+		n\IsDead = True
 	Next
 End Function
 
