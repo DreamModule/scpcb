@@ -71,7 +71,7 @@ Function InitGameplayMechanics()
 	FacilityLockdown = False
 
 	For i% = 0 To 7
-		LockedSectors[i] = 0
+		LockedSectors(i) = 0
 	Next
 
 	; naydyom tesla gates
@@ -477,7 +477,7 @@ Function LockdownAllSectors()
 	FacilityLockdown = True
 
 	For i% = 0 To 7
-		LockedSectors[i] = 1
+		LockedSectors(i) = 1
 	Next
 
 	; zakryvaem vse dveri
@@ -500,13 +500,13 @@ End Function
 
 Function UnlockSector(sectorNum%)
 	If sectorNum >= 0 And sectorNum < 8 Then
-		LockedSectors[sectorNum] = 0
+		LockedSectors(sectorNum) = 0
 	EndIf
 End Function
 
 Function IsSectorLocked%(sectorNum%)
 	If sectorNum >= 0 And sectorNum < 8 Then
-		Return LockedSectors[sectorNum]
+		Return LockedSectors(sectorNum)
 	EndIf
 	Return 0
 End Function

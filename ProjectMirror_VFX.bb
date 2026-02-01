@@ -88,8 +88,8 @@ Function InitVFXSystem()
 
 	; static frames dlya pomekh
 	For i% = 0 To 7
-		VFXStaticFrames[i] = CreateTexture(128, 128, 1 + 2)
-		tb = TextureBuffer(VFXStaticFrames[i])
+		VFXStaticFrames(i) = CreateTexture(128, 128, 1 + 2)
+		tb = TextureBuffer(VFXStaticFrames(i))
 		SetBuffer tb
 		For y% = 0 To 127
 			For x% = 0 To 127
@@ -749,9 +749,9 @@ Function CleanupVFXSystem()
 	EndIf
 
 	For i% = 0 To 7
-		If VFXStaticFrames[i] <> 0 Then
-			FreeTexture VFXStaticFrames[i]
-			VFXStaticFrames[i] = 0
+		If VFXStaticFrames(i) <> 0 Then
+			FreeTexture VFXStaticFrames(i)
+			VFXStaticFrames(i) = 0
 		EndIf
 	Next
 

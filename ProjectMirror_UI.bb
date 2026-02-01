@@ -64,8 +64,8 @@ Function InitMirrorUI()
 	KarmaChangeVisible = False
 
 	For i% = 0 To 7
-		NotificationQueue[i] = ""
-		NotificationTimers[i] = 0.0
+		NotificationQueue(i) = ""
+		NotificationTimers(i) = 0.0
 	Next
 
 	DebugLog "Mirror UI initialized"
@@ -378,8 +378,8 @@ End Function
 
 Function AddNotification(text$)
 	If NotificationCount < 8 Then
-		NotificationQueue[NotificationCount] = text
-		NotificationTimers[NotificationCount] = 280.0  ; 4 sekundy
+		NotificationQueue(NotificationCount) = text
+		NotificationTimers(NotificationCount) = 280.0  ; 4 sekundy
 		NotificationCount = NotificationCount + 1
 	EndIf
 End Function
@@ -387,12 +387,12 @@ End Function
 Function UpdateNotifications()
 	Local i% = 0
 	While i < NotificationCount
-		NotificationTimers[i] = NotificationTimers[i] - FPSfactor
-		If NotificationTimers[i] <= 0.0 Then
+		NotificationTimers(i) = NotificationTimers(i) - FPSfactor
+		If NotificationTimers(i) <= 0.0 Then
 			; udalyaem
 			For j% = i To NotificationCount - 2
-				NotificationQueue[j] = NotificationQueue[j + 1]
-				NotificationTimers[j] = NotificationTimers[j + 1]
+				NotificationQueue(j) = NotificationQueue(j + 1)
+				NotificationTimers(j) = NotificationTimers(j + 1)
 			Next
 			NotificationCount = NotificationCount - 1
 		Else
@@ -406,21 +406,21 @@ Function RenderNotifications(gw%, gh%)
 	Local y% = 80
 
 	For i% = 0 To NotificationCount - 1
-		Local alpha# = NotificationTimers[i] / 280.0
+		Local alpha# = NotificationTimers(i) / 280.0
 		If alpha > 1.0 Then alpha = 1.0
 
 		; fade in/out
-		If NotificationTimers[i] > 210.0 Then
-			alpha = (280.0 - NotificationTimers[i]) / 70.0
-		ElseIf NotificationTimers[i] < 70.0 Then
-			alpha = NotificationTimers[i] / 70.0
+		If NotificationTimers(i) > 210.0 Then
+			alpha = (280.0 - NotificationTimers(i)) / 70.0
+		ElseIf NotificationTimers(i) < 70.0 Then
+			alpha = NotificationTimers(i) / 70.0
 		EndIf
 
 		Local gray% = Int(alpha * 200)
 		Color gray, gray, gray
 
-		Local tw% = StringWidth(NotificationQueue[i])
-		Text x - tw / 2, y + i * 20, NotificationQueue[i]
+		Local tw% = StringWidth(NotificationQueue(i))
+		Text x - tw / 2, y + i * 20, NotificationQueue(i)
 	Next
 End Function
 
