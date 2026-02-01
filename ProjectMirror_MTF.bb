@@ -489,9 +489,10 @@ Function InitiateEngagement(squad.MTFFoxSquad)
 	; Авто-назначение фланкеров
 	Local flankerLAssigned% = False
 	Local flankerRAssigned% = False
+	Local fox.MTFFoxState
 
 	For i% = 0 To squad\memberCount - 1
-		Local fox.MTFFoxState = GetSquadMember(squad, i)
+		fox = GetSquadMember(squad, i)
 		If fox <> Null Then
 			If fox\role = FOX_ROLE_FLANKER_L Then flankerLAssigned = True
 			If fox\role = FOX_ROLE_FLANKER_R Then flankerRAssigned = True
@@ -501,7 +502,7 @@ Function InitiateEngagement(squad.MTFFoxSquad)
 	If (Not flankerLAssigned) Or (Not flankerRAssigned) Then
 		Local assigned% = 0
 		For i% = 0 To squad\memberCount - 1
-			Local fox.MTFFoxState = GetSquadMember(squad, i)
+			fox = GetSquadMember(squad, i)
 			If fox <> Null And fox <> squad\leader Then
 				If (Not flankerLAssigned) And assigned = 0 Then
 					fox\role = FOX_ROLE_FLANKER_L
@@ -517,7 +518,7 @@ Function InitiateEngagement(squad.MTFFoxSquad)
 	EndIf
 
 	For i% = 0 To squad\memberCount - 1
-		Local fox.MTFFoxState = GetSquadMember(squad, i)
+		fox = GetSquadMember(squad, i)
 		If fox <> Null Then
 			fox\tacticalState = FOX_STATE_ALERT
 			fox\stateTimer = 0.0
