@@ -374,15 +374,12 @@ End Function
 Function DisableSCPsBeforeBreach()
 	; Before the breach (Day 1 and 2), all SCPs should be contained
 	If CurrentDay = 3 Then Return
-	If SCPsDisabledOnce Then Return  ; Only run once to avoid memory issues
 
-	SCPsDisabledOnce = True
-
-	; First pass - hide dangerous SCPs (don't delete in loop!)
+	; Run every frame to catch newly spawned SCPs (like 066 from events)
 	For n.NPCs = Each NPCs
 		If n <> Null Then
 			Select n\NPCtype
-				Case NPCtype173, NPCtypeOldMan, NPCtype096, NPCtype049, NPCtype939
+				Case NPCtype173, NPCtypeOldMan, NPCtype096, NPCtype049, NPCtype939, NPCtype066
 					; Hide and move far away (don't delete!)
 					If n\obj <> 0 Then HideEntity n\obj
 					If n\Collider <> 0 Then PositionEntity n\Collider, 0, -500, 0
@@ -390,8 +387,6 @@ Function DisableSCPsBeforeBreach()
 			End Select
 		EndIf
 	Next
-
-	DebugLog "SCPs disabled for pre-breach"
 End Function
 
 Function UpdateSteveNPC()

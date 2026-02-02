@@ -2569,7 +2569,10 @@ Function UpdateEvents()
 				EndIf
 				
 				If e\EventState = 0 Then
-					CreateNPC(NPCtype066, EntityX(e\room\obj), 0.5, EntityZ(e\room\obj))
+					; Only spawn SCP-066 on Day 3 (after breach)
+					If CurrentDay = 3 Then
+						CreateNPC(NPCtype066, EntityX(e\room\obj), 0.5, EntityZ(e\room\obj))
+					EndIf
 					e\EventState = 1
 				EndIf
 				;[End Block]
