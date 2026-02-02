@@ -176,7 +176,7 @@ Function SpawnGuardAtCafeteria%()
 	EndIf
 End Function
 
-; Guard equipment - radio, level 3 keycard, and P90 weapon
+; Guard equipment - radio, level 3 keycard, night vision, battery
 Function GiveGuardEquipment()
 	Local it.Items
 	Local slot% = 0
@@ -226,7 +226,7 @@ Function GiveGuardEquipment()
 		DebugLog "Gave keycard lvl 3"
 	EndIf
 
-	; Flashlight - standard guard equipment
+	; Night Vision Goggles - for dark areas
 	For i% = slot To 9
 		If Inventory(i) = Null Then
 			slot = i
@@ -234,7 +234,7 @@ Function GiveGuardEquipment()
 		EndIf
 	Next
 
-	it = CreateItem("Flashlight", "flash", 1, 1, 1)
+	it = CreateItem("Night Vision Goggles", "nvgoggles", 1, 1, 1)
 	If it <> Null Then
 		it\Picked = True
 		it\Dropped = -1
@@ -245,7 +245,7 @@ Function GiveGuardEquipment()
 		EntityParent it\collider, 0
 		ItemAmount = ItemAmount + 1
 		slot = slot + 1
-		DebugLog "Gave flashlight"
+		DebugLog "Gave night vision goggles"
 	EndIf
 
 	; Navigator - GPS device (for compass/navigation)
@@ -256,7 +256,7 @@ Function GiveGuardEquipment()
 		EndIf
 	Next
 
-	it = CreateItem("S-Nav Navigator", "nav", 1, 1, 1)
+	it = CreateItem("S-NAV 300 Navigator", "nav", 1, 1, 1)
 	If it <> Null Then
 		it\Picked = True
 		it\Dropped = -1
@@ -266,7 +266,29 @@ Function GiveGuardEquipment()
 		EntityType it\collider, HIT_ITEM
 		EntityParent it\collider, 0
 		ItemAmount = ItemAmount + 1
+		slot = slot + 1
 		DebugLog "Gave navigator"
+	EndIf
+
+	; 9V Battery - spare battery for equipment
+	For i% = slot To 9
+		If Inventory(i) = Null Then
+			slot = i
+			Exit
+		EndIf
+	Next
+
+	it = CreateItem("9V Battery", "bat", 1, 1, 1)
+	If it <> Null Then
+		it\Picked = True
+		it\Dropped = -1
+		If it\itemtemplate <> Null Then it\itemtemplate\found = True
+		Inventory(slot) = it
+		HideEntity it\collider
+		EntityType it\collider, HIT_ITEM
+		EntityParent it\collider, 0
+		ItemAmount = ItemAmount + 1
+		DebugLog "Gave battery"
 	EndIf
 
 	; Full stamina and health
