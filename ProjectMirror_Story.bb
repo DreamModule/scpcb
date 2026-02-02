@@ -243,7 +243,7 @@ Type ContainmentScene
 	Field state%
 	Field timer#
 	Field phase%
-	Field room173.Rooms
+	Field room173%  ; Room pointer (stored as integer to avoid type ordering issues)
 	Field playerPosition%
 	Field lightsFlickering%
 	Field flickerCount%
@@ -1516,7 +1516,7 @@ Function Start173Scene(room.Rooms)
 	ActiveScene\state = SCENE_WAITING_PLAYER
 	ActiveScene\timer = 0.0
 	ActiveScene\phase = 0
-	ActiveScene\room173 = room
+	ActiveScene\room173 = Handle(room)
 	ActiveScene\playerPosition = 0
 	ActiveScene\lightsFlickering = False
 	ActiveScene\flickerCount = 0
@@ -1640,13 +1640,14 @@ Function UpdateLightsFlicker()
 		ActiveScene\flickerCount = ActiveScene\flickerCount + 1
 
 		; miganie osveshcheniya v komnate
-		If ActiveScene\room173 <> Null Then
+		Local flickerRoom.Rooms = Object.Rooms(ActiveScene\room173)
+		If flickerRoom <> Null Then
 			For i% = 0 To MaxRoomLights - 1
-				If ActiveScene\room173\Lights[i] <> 0 Then
+				If flickerRoom\Lights[i] <> 0 Then
 					If ActiveScene\flickerCount Mod 2 = 0 Then
-						HideEntity ActiveScene\room173\Lights[i]
+						HideEntity flickerRoom\Lights[i]
 					Else
-						ShowEntity ActiveScene\room173\Lights[i]
+						ShowEntity flickerRoom\Lights[i]
 					EndIf
 				EndIf
 			Next
@@ -1654,10 +1655,10 @@ Function UpdateLightsFlicker()
 
 		If ActiveScene\flickerCount >= 6 Then
 			; vosstanovit' svet
-			If ActiveScene\room173 <> Null Then
+			If flickerRoom <> Null Then
 				For i% = 0 To MaxRoomLights - 1
-					If ActiveScene\room173\Lights[i] <> 0 Then
-						ShowEntity ActiveScene\room173\Lights[i]
+					If flickerRoom\Lights[i] <> 0 Then
+						ShowEntity flickerRoom\Lights[i]
 					EndIf
 				Next
 			EndIf
@@ -1668,11 +1669,14 @@ End Function
 
 Function MoveActorsIntoCell()
 	If ActiveScene = Null Then Return
-	If ActiveScene\room173 = Null Then Return
+	If ActiveScene\room173 = 0 Then Return
 
-	Local cellX# = EntityX(ActiveScene\room173\obj)
+	Local cellRoom.Rooms = Object.Rooms(ActiveScene\room173)
+	If cellRoom = Null Then Return
+
+	Local cellX# = EntityX(cellRoom\obj)
 	Local cellY# = 0.5
-	Local cellZ# = EntityZ(ActiveScene\room173\obj)
+	Local cellZ# = EntityZ(cellRoom\obj)
 
 	If SceneDClass1 <> Null And SceneDClass1\npc <> Null Then
 		PositionEntity SceneDClass1\npc\Collider, cellX - 1.0, cellY, cellZ + 2.0
@@ -1689,11 +1693,14 @@ End Function
 
 Function MoveActorsOutOfCell()
 	If ActiveScene = Null Then Return
-	If ActiveScene\room173 = Null Then Return
+	If ActiveScene\room173 = 0 Then Return
 
-	Local exitX# = EntityX(ActiveScene\room173\obj)
+	Local exitRoom.Rooms = Object.Rooms(ActiveScene\room173)
+	If exitRoom = Null Then Return
+
+	Local exitX# = EntityX(exitRoom\obj)
 	Local exitY# = 0.5
-	Local exitZ# = EntityZ(ActiveScene\room173\obj) - 4.0
+	Local exitZ# = EntityZ(exitRoom\obj) - 4.0
 
 	If SceneDClass1 <> Null And SceneDClass1\npc <> Null Then
 		PositionEntity SceneDClass1\npc\Collider, exitX - 1.0, exitY, exitZ
