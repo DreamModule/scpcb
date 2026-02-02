@@ -324,6 +324,10 @@ Function InitStorySystem()
 	IntroAnnouncementSFX = LoadSound("SFX\Room\Intro\Announcement.ogg")
 	LightsFlickerSFX = LoadSound("SFX\General\LightFlicker.ogg")
 	IntercomSFX = LoadSound("SFX\General\Intercom.ogg")
+
+	; Initial navigation - talk to Steve first
+	SetNavigationToRoom("room2cafeteria")
+	NavigationTargetName = "Steve"
 End Function
 
 Function SetStoryFlag(flagIndex%, value% = 1)
@@ -689,6 +693,80 @@ Function EndDialog()
 	For i% = 0 To MAX_DIALOG_OPTIONS - 1
 		DialogOptions(i) = Null
 	Next
+
+	; Update navigation based on story progress
+	UpdateNavigationGuidance()
+End Function
+
+; ============================================================================
+; NAVIGATION GUIDANCE - Steve tells Markus where to go
+; ============================================================================
+
+Function UpdateNavigationGuidance()
+	; Day 1 navigation
+	If CurrentDay = 1 Then
+		If GetStoryFlag(FLAG_COFFEE_WITH_STEVE) = 1 And GetStoryFlag(FLAG_SAW_HELICOPTERS) = 0 Then
+			; After coffee, go see helicopters
+			SetNavigationToRoom("room2servers")
+			NavigationTargetName = "Helipad"
+		ElseIf GetStoryFlag(FLAG_SAW_HELICOPTERS) = 1 And GetStoryFlag(FLAG_ESCORTED_DCLASS) = 0 Then
+			; After helicopters, escort D-Class
+			SetNavigationToRoom("room2closets")
+			NavigationTargetName = "D-Class Cells"
+		ElseIf GetStoryFlag(FLAG_ESCORTED_DCLASS) = 1 And GetStoryFlag(FLAG_SAW_999) = 0 Then
+			; Escort to 999
+			SetNavigationToRoom("room2sl")
+			NavigationTargetName = "SCP-999"
+		ElseIf GetStoryFlag(FLAG_SAW_999) = 1 Then
+			; Back to cafeteria
+			SetNavigationToRoom("room2cafeteria")
+			NavigationTargetName = "Cafeteria"
+		EndIf
+	EndIf
+
+	; Day 2 navigation
+	If CurrentDay = 2 Then
+		If GetStoryFlag(FLAG_DAY2_STARTED) = 1 And GetStoryFlag(FLAG_AT_173_CHAMBER) = 0 Then
+			; Go to 173 chamber
+			SetNavigationToRoom("room173")
+			NavigationTargetName = "SCP-173"
+		ElseIf GetStoryFlag(FLAG_AT_173_CHAMBER) = 1 And GetStoryFlag(FLAG_PROCEDURE_COMPLETE) = 0 Then
+			; Stay at 173
+			SetNavigationToRoom("room173")
+			NavigationTargetName = "173 Chamber"
+		ElseIf GetStoryFlag(FLAG_PROCEDURE_COMPLETE) = 1 Then
+			; Go to dorms
+			SetNavigationToRoom("room2dorm")
+			NavigationTargetName = "Dorms"
+		EndIf
+	EndIf
+
+	; Day 3 navigation
+	If CurrentDay = 3 Then
+		Select CurrentAct
+			Case ACT_AWAKENING
+				SetNavigationToRoom("room173")
+				NavigationTargetName = "173 Chamber"
+			Case ACT_ECHO
+				SetNavigationToRoom("room2cafeteria")
+				NavigationTargetName = "Cafeteria"
+			Case ACT_VOICES
+				SetNavigationToRoom("room2storage")
+				NavigationTargetName = "939 Zone"
+			Case ACT_MACHINE
+				SetNavigationToRoom("room914")
+				NavigationTargetName = "SCP-914"
+			Case ACT_FLOOR
+				SetNavigationToRoom("room2elevator")
+				NavigationTargetName = "Elevator"
+			Case ACT_SURFACE
+				SetNavigationToRoom("exit1")
+				NavigationTargetName = "Gate B"
+			Case ACT_FINALE
+				SetNavigationToRoom("roomexitgatea")
+				NavigationTargetName = "Gate A"
+		End Select
+	EndIf
 End Function
 
 Function RenderDialog()

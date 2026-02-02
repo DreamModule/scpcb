@@ -193,6 +193,11 @@ Function UpdateGameplayMechanics()
 
 	; MTF behavior
 	UpdateMTFBehavior()
+
+	; Elevator fast travel (Day 1 and 2 only)
+	If ElevatorFastTravelEnabled And CurrentDay < 3 Then
+		CheckElevatorFastTravel()
+	EndIf
 End Function
 
 ; ============================================================================
@@ -759,6 +764,61 @@ Function HasSteveBadge%()
 	; proverka nalichiya beidzhika Stiva
 	If GetStoryFlag(FLAG_ACT2_FOUND_DICTAPHONE) Then Return True
 	Return False
+End Function
+
+; ============================================================================
+; ELEVATOR FAST TRAVEL
+; For Day 1 and 2 - skip the long walks through the facility
+; ============================================================================
+
+Function CheckElevatorFastTravel()
+	If CurrentDay = 3 Then Return  ; Day 3 = full exploration needed
+	If ElevatorTransitionActive Then Return
+
+	; Check if player is in an elevator room
+	If PlayerRoom = Null Then Return
+	If PlayerRoom\RoomTemplate = Null Then Return
+
+	Local roomName$ = Lower(PlayerRoom\RoomTemplate\Name)
+
+	; Check for elevator rooms
+	If Instr(roomName, "elevator") > 0 Or Instr(roomName, "lift") > 0 Then
+		; Show fast travel prompt
+		ShowInteractionPrompt("Use elevator (Fast Travel)", "F")
+
+		; Check for F key press
+		If KeyHit(33) Then  ; F key
+			; Determine destination based on current objectives
+			Local destination$ = GetElevatorDestination()
+			If destination <> "" Then
+				TriggerElevatorFastTravel(destination)
+			EndIf
+		EndIf
+	EndIf
+End Function
+
+Function GetElevatorDestination$()
+	; Day 1 destinations
+	If CurrentDay = 1 Then
+		If GetStoryFlag(FLAG_COFFEE_WITH_STEVE) = 1 And GetStoryFlag(FLAG_SAW_HELICOPTERS) = 0 Then
+			Return "room2servers"  ; Helipad area
+		ElseIf GetStoryFlag(FLAG_SAW_HELICOPTERS) = 1 And GetStoryFlag(FLAG_ESCORTED_DCLASS) = 0 Then
+			Return "room2closets"  ; D-Class cells
+		ElseIf GetStoryFlag(FLAG_SAW_999) = 1 Then
+			Return "room2cafeteria"  ; Back to cafeteria
+		EndIf
+	EndIf
+
+	; Day 2 destinations
+	If CurrentDay = 2 Then
+		If GetStoryFlag(FLAG_DAY2_STARTED) = 1 And GetStoryFlag(FLAG_AT_173_CHAMBER) = 0 Then
+			Return "room173"  ; 173 chamber
+		ElseIf GetStoryFlag(FLAG_PROCEDURE_COMPLETE) = 1 Then
+			Return "room2dorm"  ; Dorms
+		EndIf
+	EndIf
+
+	Return ""
 End Function
 
 ; ============================================================================

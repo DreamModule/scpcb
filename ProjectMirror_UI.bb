@@ -164,9 +164,10 @@ Function RenderMirrorUI()
 		RenderRadioMessage(gw, gh)
 	EndIf
 
-	; === COMPASS ===
-	If CompassEnabled And CurrentDay = 3 Then
+	; === COMPASS / NAVIGATION ===
+	If CompassEnabled Then
 		RenderCompass(gw, gh)
+		RenderNavigationArrow(gw, gh)
 	EndIf
 End Function
 
@@ -562,6 +563,69 @@ Function RenderCompass(gw%, gh%)
 	; tsentral'naya metka
 	Color 255, 255, 255
 	Line x, y - 12, x, y + 8
+End Function
+
+; ============================================================================
+; NAVIGATION ARROW - Shows direction to objective
+; ============================================================================
+
+Function RenderNavigationArrow(gw%, gh%)
+	If Not NavigationActive Then Return
+
+	Local x% = gw - 100
+	Local y% = 120
+
+	; Get angle to target
+	Local angle# = GetNavigationAngle()
+	Local dist# = GetNavigationDistance()
+
+	; Background box
+	Color 0, 0, 0
+	Rect x - 40, y - 40, 80, 90, True
+
+	; Border
+	Color 80, 80, 50
+	Rect x - 40, y - 40, 80, 90, False
+
+	; Title
+	Color 200, 200, 100
+	Text x - 35, y - 35, "NAV"
+
+	; Draw arrow pointing to target
+	Local arrowLen# = 25.0
+	Local radAngle# = (angle - 90.0) * 3.14159 / 180.0  ; Convert to radians, adjust for screen coords
+
+	Local arrowX1# = x + Cos(radAngle) * arrowLen
+	Local arrowY1# = y + Sin(radAngle) * arrowLen
+	Local arrowX2# = x - Cos(radAngle) * 5.0
+	Local arrowY2# = y - Sin(radAngle) * 5.0
+
+	; Arrow color (yellow/gold)
+	Color 255, 220, 50
+
+	; Draw arrow as triangle
+	Local perpAngle# = radAngle + 1.5708  ; 90 degrees in radians
+	Local arrowX3# = arrowX2 + Cos(perpAngle) * 8.0
+	Local arrowY3# = arrowY2 + Sin(perpAngle) * 8.0
+	Local arrowX4# = arrowX2 - Cos(perpAngle) * 8.0
+	Local arrowY4# = arrowY2 - Sin(perpAngle) * 8.0
+
+	Line Int(arrowX1), Int(arrowY1), Int(arrowX3), Int(arrowY3)
+	Line Int(arrowX1), Int(arrowY1), Int(arrowX4), Int(arrowY4)
+	Line Int(arrowX3), Int(arrowY3), Int(arrowX4), Int(arrowY4)
+
+	; Distance text
+	Color 150, 150, 150
+	Local distStr$ = Int(dist) + "m"
+	Text x - StringWidth(distStr) / 2, y + 25, distStr
+
+	; Target name
+	If NavigationTargetName <> "" Then
+		Color 200, 200, 200
+		Local name$ = NavigationTargetName
+		If Len(name) > 10 Then name = Left(name, 10) + ".."
+		Text x - StringWidth(name) / 2, y + 38, name
+	EndIf
 End Function
 
 ; ============================================================================

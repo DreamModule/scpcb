@@ -40,6 +40,26 @@ Global MirrorGameplayEnabled% = True
 Global MirrorSpawnRoom$ = "room2cafeteria"
 Global MirrorUseCustomSpawn% = True
 
+; Steve NPC (partner guard)
+Global SteveNPC.NPCs = Null
+Global SteveSpawned% = False
+
+; Pre-breach lighting (Day 1 and 2 have normal lights)
+Global PreBreachLightingEnabled% = True
+
+; Navigation/Compass system
+Global NavigationTargetX# = 0.0
+Global NavigationTargetY# = 0.0
+Global NavigationTargetZ# = 0.0
+Global NavigationActive% = False
+Global NavigationTargetName$ = ""
+
+; Elevator fast travel
+Global ElevatorFastTravelEnabled% = True
+Global ElevatorTransitionActive% = False
+Global ElevatorTransitionTimer# = 0.0
+Global ElevatorDestination$ = ""
+
 Function InitProjectMirror()
 	If ProjectMirrorInitialized Then Return
 
@@ -156,12 +176,12 @@ Function SpawnGuardAtCafeteria%()
 	EndIf
 End Function
 
-; экипировка охранника - рация и ключ-карта 2
+; Guard equipment - radio, level 3 keycard, and P90 weapon
 Function GiveGuardEquipment()
 	Local it.Items
 	Local slot% = 0
 
-	; ищем свободные слоты в инвентаре
+	; Find free inventory slots
 	For i% = 0 To 9
 		If Inventory(i) = Null Then
 			slot = i
@@ -169,7 +189,7 @@ Function GiveGuardEquipment()
 		EndIf
 	Next
 
-	; рация - основной инструмент охранника
+	; Radio - main communication tool
 	it = CreateItem("Radio Transceiver", "radio", 1, 1, 1)
 	If it <> Null Then
 		it\Picked = True
@@ -184,7 +204,7 @@ Function GiveGuardEquipment()
 		DebugLog "Gave radio"
 	EndIf
 
-	; ключ-карта уровня 2 - стандарт для охранника
+	; Level 3 keycard - security guard clearance (can open most doors before breach)
 	For i% = slot To 9
 		If Inventory(i) = Null Then
 			slot = i
@@ -192,7 +212,7 @@ Function GiveGuardEquipment()
 		EndIf
 	Next
 
-	it = CreateItem("Level 2 Key Card", "key2", 1, 1, 1)
+	it = CreateItem("Level 3 Key Card", "key3", 1, 1, 1)
 	If it <> Null Then
 		it\Picked = True
 		it\Dropped = -1
@@ -202,15 +222,315 @@ Function GiveGuardEquipment()
 		EntityType it\collider, HIT_ITEM
 		EntityParent it\collider, 0
 		ItemAmount = ItemAmount + 1
-		DebugLog "Gave keycard lvl 2"
+		slot = slot + 1
+		DebugLog "Gave keycard lvl 3"
 	EndIf
 
-	; полная стамина и здоровье
+	; Flashlight - standard guard equipment
+	For i% = slot To 9
+		If Inventory(i) = Null Then
+			slot = i
+			Exit
+		EndIf
+	Next
+
+	it = CreateItem("Flashlight", "flash", 1, 1, 1)
+	If it <> Null Then
+		it\Picked = True
+		it\Dropped = -1
+		If it\itemtemplate <> Null Then it\itemtemplate\found = True
+		Inventory(slot) = it
+		HideEntity it\collider
+		EntityType it\collider, HIT_ITEM
+		EntityParent it\collider, 0
+		ItemAmount = ItemAmount + 1
+		slot = slot + 1
+		DebugLog "Gave flashlight"
+	EndIf
+
+	; Navigator - GPS device (for compass/navigation)
+	For i% = slot To 9
+		If Inventory(i) = Null Then
+			slot = i
+			Exit
+		EndIf
+	Next
+
+	it = CreateItem("S-Nav Navigator", "nav", 1, 1, 1)
+	If it <> Null Then
+		it\Picked = True
+		it\Dropped = -1
+		If it\itemtemplate <> Null Then it\itemtemplate\found = True
+		Inventory(slot) = it
+		HideEntity it\collider
+		EntityType it\collider, HIT_ITEM
+		EntityParent it\collider, 0
+		ItemAmount = ItemAmount + 1
+		DebugLog "Gave navigator"
+	EndIf
+
+	; Full stamina and health
 	Stamina = 100.0
-	; Injuries = 0.0  ; если есть такая переменная
-	; Bloodloss = 0.0
 
 	DebugLog "Guard equipment ready"
+End Function
+
+; ============================================================================
+; STEVE NPC - Partner guard who gives quests and guidance
+; ============================================================================
+
+Function SpawnSteveInCafeteria()
+	If SteveSpawned Then Return
+	If CurrentDay = 3 Then Return  ; Steve is dead on Day 3
+
+	Local cafeRoom.Rooms = Null
+
+	For r.Rooms = Each Rooms
+		If r\RoomTemplate <> Null Then
+			If Lower(r\RoomTemplate\Name) = "room2cafeteria" Then
+				cafeRoom = r
+				Exit
+			EndIf
+		EndIf
+	Next
+
+	If cafeRoom = Null Then Return
+
+	; Spawn Steve near player
+	Local steveX# = EntityX(cafeRoom\obj) + 2.0
+	Local steveY# = 0.5
+	Local steveZ# = EntityZ(cafeRoom\obj) - 1.0
+
+	SteveNPC = CreateNPC(NPCtypeGuard, steveX, steveY, steveZ)
+
+	If SteveNPC <> Null Then
+		; Set Steve to friendly idle state
+		SteveNPC\State = 7  ; stationary
+		SteveNPC\State3 = 0  ; not targeting player
+
+		SteveSpawned = True
+		SetStoryFlag(FLAG_STEVE_MET, 1)
+
+		DebugLog "Steve spawned in cafeteria"
+	EndIf
+End Function
+
+Function RemoveSCP066FromCafeteria()
+	; Remove any SCP-066 entities from cafeteria area (Day 1/2 pre-breach)
+	If CurrentDay = 3 Then Return  ; On Day 3 let the game run normally
+
+	For n.NPCs = Each NPCs
+		If n\NPCtype = NPCtype066 Then
+			; Check if in cafeteria
+			For r.Rooms = Each Rooms
+				If r\RoomTemplate <> Null Then
+					If Lower(r\RoomTemplate\Name) = "room2cafeteria" Then
+						Local dist# = EntityDistance(n\Collider, r\obj)
+						If dist < 20.0 Then
+							; Remove this SCP-066
+							RemoveNPC(n)
+							DebugLog "Removed SCP-066 from cafeteria (pre-breach)"
+							Exit
+						EndIf
+					EndIf
+				EndIf
+			Next
+		EndIf
+	Next
+End Function
+
+Function UpdateSteveNPC()
+	If SteveNPC = Null Then Return
+	If CurrentDay = 3 Then Return
+
+	; Keep Steve friendly and facing player
+	SteveNPC\State = 7  ; stay stationary
+	SteveNPC\State3 = 0  ; not hostile
+
+	; Make Steve face the player when close
+	Local dist# = EntityDistance(SteveNPC\Collider, Collider)
+	If dist < 5.0 Then
+		; Point at player
+		PointEntity SteveNPC\Collider, Collider
+		RotateEntity SteveNPC\Collider, 0, EntityYaw(SteveNPC\Collider), 0
+	EndIf
+End Function
+
+; ============================================================================
+; PRE-BREACH LIGHTING - Day 1 and 2 have normal facility lights
+; ============================================================================
+
+Function SetPreBreachLighting()
+	If Not PreBreachLightingEnabled Then Return
+	If CurrentDay >= 3 Then Return  ; Day 3 = breach = emergency lighting
+
+	; Set ambient lighting to normal (not emergency red/dark)
+	AmbientLight 80, 80, 80  ; Bright normal lighting
+
+	; Set fog to minimal
+	CameraFogMode Camera, 1
+	CameraFogRange Camera, 5, 30
+	CameraFogColor Camera, 40, 40, 45
+
+	DebugLog "Pre-breach lighting enabled (Day " + CurrentDay + ")"
+End Function
+
+Function SetBreachLighting()
+	; Emergency lighting for Day 3
+	AmbientLight 30, 20, 20  ; Dark red tint
+
+	CameraFogMode Camera, 1
+	CameraFogRange Camera, 1, 15
+	CameraFogColor Camera, 10, 5, 5
+
+	DebugLog "Breach lighting enabled"
+End Function
+
+; ============================================================================
+; NAVIGATION SYSTEM - Compass/GPS showing where to go
+; ============================================================================
+
+Function SetNavigationTarget(targetName$, x#, y#, z#)
+	NavigationTargetName = targetName
+	NavigationTargetX = x
+	NavigationTargetY = y
+	NavigationTargetZ = z
+	NavigationActive = True
+
+	DebugLog "Navigation target: " + targetName
+End Function
+
+Function SetNavigationToRoom(roomName$)
+	For r.Rooms = Each Rooms
+		If r\RoomTemplate <> Null Then
+			If Lower(r\RoomTemplate\Name) = Lower(roomName) Then
+				SetNavigationTarget(roomName, EntityX(r\obj), EntityY(r\obj), EntityZ(r\obj))
+				Return
+			EndIf
+		EndIf
+	Next
+End Function
+
+Function ClearNavigation()
+	NavigationActive = False
+	NavigationTargetName = ""
+End Function
+
+Function GetNavigationAngle#()
+	If Not NavigationActive Then Return 0.0
+
+	Local dx# = NavigationTargetX - EntityX(Collider)
+	Local dz# = NavigationTargetZ - EntityZ(Collider)
+
+	Local targetAngle# = ATan2(dx, dz)
+	Local playerAngle# = EntityYaw(Collider)
+
+	Local relativeAngle# = targetAngle - playerAngle
+
+	; Normalize to -180 to 180
+	While relativeAngle > 180.0
+		relativeAngle = relativeAngle - 360.0
+	Wend
+	While relativeAngle < -180.0
+		relativeAngle = relativeAngle + 360.0
+	Wend
+
+	Return relativeAngle
+End Function
+
+Function GetNavigationDistance#()
+	If Not NavigationActive Then Return 0.0
+
+	Local dx# = NavigationTargetX - EntityX(Collider)
+	Local dz# = NavigationTargetZ - EntityZ(Collider)
+
+	Return Sqr(dx * dx + dz * dz)
+End Function
+
+; ============================================================================
+; ELEVATOR FAST TRAVEL - Fade out and teleport instead of walking
+; ============================================================================
+
+Function TriggerElevatorFastTravel(destinationRoom$)
+	If Not ElevatorFastTravelEnabled Then Return
+
+	ElevatorTransitionActive = True
+	ElevatorTransitionTimer = 0.0
+	ElevatorDestination = destinationRoom
+
+	; Disable player movement
+	CanPlayerMove = False
+
+	DebugLog "Elevator fast travel to: " + destinationRoom
+End Function
+
+Function UpdateElevatorFastTravel()
+	If Not ElevatorTransitionActive Then Return
+
+	ElevatorTransitionTimer = ElevatorTransitionTimer + FPSfactor
+
+	; Phase 1: Fade to black (0-70 frames = 1 sec)
+	If ElevatorTransitionTimer < 70.0 Then
+		; Fading out handled in render
+		Return
+	EndIf
+
+	; Phase 2: Teleport (at 70 frames)
+	If ElevatorTransitionTimer >= 70.0 And ElevatorTransitionTimer < 75.0 Then
+		TeleportToRoom(ElevatorDestination)
+	EndIf
+
+	; Phase 3: Fade in (70-140 frames)
+	If ElevatorTransitionTimer >= 140.0 Then
+		ElevatorTransitionActive = False
+		CanPlayerMove = True
+		DebugLog "Elevator fast travel complete"
+	EndIf
+End Function
+
+Function TeleportToRoom(roomName$)
+	For r.Rooms = Each Rooms
+		If r\RoomTemplate <> Null Then
+			If Lower(r\RoomTemplate\Name) = Lower(roomName) Then
+				PositionEntity Collider, EntityX(r\obj), 0.5, EntityZ(r\obj)
+				ResetEntity Collider
+				PlayerRoom = r
+				DebugLog "Teleported to: " + roomName
+				Return
+			EndIf
+		EndIf
+	Next
+
+	DebugLog "WARNING: Teleport room not found: " + roomName
+End Function
+
+Function RenderElevatorTransition()
+	If Not ElevatorTransitionActive Then Return
+
+	Local alpha# = 0.0
+
+	; Fade out phase
+	If ElevatorTransitionTimer < 70.0 Then
+		alpha = ElevatorTransitionTimer / 70.0
+	; Hold black
+	ElseIf ElevatorTransitionTimer < 100.0 Then
+		alpha = 1.0
+	; Fade in phase
+	Else
+		alpha = 1.0 - ((ElevatorTransitionTimer - 100.0) / 40.0)
+	EndIf
+
+	If alpha > 0.0 Then
+		Color 0, 0, 0
+		Rect 0, 0, GraphicsWidth(), GraphicsHeight(), True
+
+		; Show loading text
+		If alpha > 0.5 Then
+			Color 255, 255, 255
+			Local txt$ = "Moving..."
+			Text GraphicsWidth() / 2 - StringWidth(txt) / 2, GraphicsHeight() / 2, txt
+		EndIf
+	EndIf
 End Function
 
 Function UpdateProjectMirror()
@@ -226,6 +546,23 @@ Function UpdateProjectMirror()
 			DebugLog "Guard spawn completed on update"
 		EndIf
 	EndIf
+
+	; Steve NPC management (Day 1 and 2)
+	If CurrentDay < 3 Then
+		If Not SteveSpawned Then
+			SpawnSteveInCafeteria()
+		EndIf
+		RemoveSCP066FromCafeteria()
+		UpdateSteveNPC()
+	EndIf
+
+	; Pre-breach lighting (Day 1 and 2)
+	If CurrentDay < 3 Then
+		SetPreBreachLighting()
+	EndIf
+
+	; Elevator fast travel
+	UpdateElevatorFastTravel()
 
 	; Story update
 	If MirrorStoryEnabled Then
@@ -392,6 +729,11 @@ Function RenderProjectMirror()
 	; === Nuke sequence ===
 	If MirrorVFXEnabled And NukeSequenceActive Then
 		RenderNukeSequence()
+	EndIf
+
+	; === Elevator fast travel transition ===
+	If ElevatorTransitionActive Then
+		RenderElevatorTransition()
 	EndIf
 
 	; дебаг оверлей
