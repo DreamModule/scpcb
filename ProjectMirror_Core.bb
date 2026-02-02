@@ -301,6 +301,16 @@ End Function
 ; STEVE NPC - Partner guard who gives quests and guidance
 ; ============================================================================
 
+; Steve states
+Const STEVE_STATE_IDLE% = 0
+Const STEVE_STATE_FOLLOWING% = 1
+Const STEVE_STATE_LEADING% = 2
+Const STEVE_STATE_WAITING% = 3
+
+Global SteveState% = STEVE_STATE_IDLE
+Global SteveTargetX# = 0.0
+Global SteveTargetZ# = 0.0
+
 Function SpawnSteveInCafeteria()
 	If SteveSpawned Then Return
 	If CurrentDay = 3 Then Return  ; Steve is dead on Day 3
@@ -318,10 +328,10 @@ Function SpawnSteveInCafeteria()
 
 	If cafeRoom = Null Then Return
 
-	; Spawn Steve in the center of the cafeteria (not in walls)
-	Local steveX# = EntityX(cafeRoom\obj)
+	; Spawn Steve AWAY from player (offset by 3 meters)
+	Local steveX# = EntityX(Collider) + 3.0
 	Local steveY# = 0.5
-	Local steveZ# = EntityZ(cafeRoom\obj)
+	Local steveZ# = EntityZ(Collider) + 2.0
 
 	SteveNPC = CreateNPC(NPCtypeGuard, steveX, steveY, steveZ)
 
@@ -329,82 +339,153 @@ Function SpawnSteveInCafeteria()
 		; Set Steve to friendly idle state
 		SteveNPC\State = 7  ; stationary
 		SteveNPC\State3 = 0  ; not targeting player
+		SteveState = STEVE_STATE_IDLE
 
 		SteveSpawned = True
 		SetStoryFlag(FLAG_STEVE_MET, 1)
 
-		DebugLog "Steve spawned in cafeteria"
+		DebugLog "Steve spawned near player"
 	EndIf
+End Function
+
+Global SCPsDisabledOnce% = False
+Global CorpsesRemovedOnce% = False
+
+Function RemoveElevatorCorpses()
+	; Remove dead D-Class from elevator rooms (unrealistic for pre-breach)
+	If CurrentDay = 3 Then Return
+	If CorpsesRemovedOnce Then Return
+
+	For n.NPCs = Each NPCs
+		If n = Null Then Continue
+
+		; D-Class in dead state (State 8 = dead/corpse)
+		If n\NPCtype = NPCtypeD And n\State = 8 Then
+			; Remove corpse
+			If n\obj <> 0 Then HideEntity n\obj
+			If n\Collider <> 0 Then PositionEntity n\Collider, 0, -500, 0
+			DebugLog "Removed D-Class corpse (pre-breach)"
+		EndIf
+	Next
+
+	CorpsesRemovedOnce = True
 End Function
 
 Function DisableSCPsBeforeBreach()
 	; Before the breach (Day 1 and 2), all SCPs should be contained
-	; Remove/disable dangerous SCPs that shouldn't be roaming
-	If CurrentDay = 3 Then Return  ; On Day 3 = breach, let SCPs roam
+	If CurrentDay = 3 Then Return
+	If SCPsDisabledOnce Then Return  ; Only run once to avoid memory issues
 
+	SCPsDisabledOnce = True
+
+	; First pass - hide dangerous SCPs (don't delete in loop!)
 	For n.NPCs = Each NPCs
-		; Remove dangerous SCPs that shouldn't be out
+		If n = Null Then Continue
+
 		Select n\NPCtype
-			Case NPCtype173  ; SCP-173 - should be in containment
-				HideEntity n\obj
-				PositionEntity n\Collider, 0, -500, 0  ; Move far away
+			Case NPCtype173, NPCtypeOldMan, NPCtype096, NPCtype049, NPCtype939
+				; Hide and move far away (don't delete!)
+				If n\obj <> 0 Then HideEntity n\obj
+				If n\Collider <> 0 Then PositionEntity n\Collider, 0, -500, 0
 				n\State = 0
-				DebugLog "Disabled SCP-173 (pre-breach)"
-
-			Case NPCtypeOldMan  ; SCP-106 - should be in containment
-				HideEntity n\obj
-				PositionEntity n\Collider, 0, -500, 0
-				n\State = 0
-				DebugLog "Disabled SCP-106 (pre-breach)"
-
-			Case NPCtype096  ; SCP-096 - should be in containment
-				HideEntity n\obj
-				PositionEntity n\Collider, 0, -500, 0
-				n\State = 0
-				DebugLog "Disabled SCP-096 (pre-breach)"
-
-			Case NPCtype049  ; SCP-049 - should be in containment
-				HideEntity n\obj
-				PositionEntity n\Collider, 0, -500, 0
-				n\State = 0
-				DebugLog "Disabled SCP-049 (pre-breach)"
-
-			Case NPCtypeZombie  ; 049 zombies - shouldn't exist yet
-				RemoveNPC(n)
-				DebugLog "Removed zombie (pre-breach)"
-
-			Case NPCtype939  ; SCP-939 - should be in containment
-				HideEntity n\obj
-				PositionEntity n\Collider, 0, -500, 0
-				n\State = 0
-				DebugLog "Disabled SCP-939 (pre-breach)"
-
-			Case NPCtype066  ; SCP-066 - remove from cafeteria
-				RemoveNPC(n)
-				DebugLog "Removed SCP-066 (pre-breach)"
-
-			Case NPCtypeMTF  ; MTF shouldn't be here yet
-				RemoveNPC(n)
-				DebugLog "Removed MTF (pre-breach)"
 		End Select
 	Next
+
+	DebugLog "SCPs disabled for pre-breach"
 End Function
 
 Function UpdateSteveNPC()
 	If SteveNPC = Null Then Return
 	If CurrentDay = 3 Then Return
 
-	; Keep Steve friendly and facing player
-	SteveNPC\State = 7  ; stay stationary
+	; Keep Steve friendly
 	SteveNPC\State3 = 0  ; not hostile
 
-	; Make Steve face the player when close
-	Local dist# = EntityDistance(SteveNPC\Collider, Collider)
-	If dist < 5.0 Then
-		; Point at player
-		PointEntity SteveNPC\Collider, Collider
-		RotateEntity SteveNPC\Collider, 0, EntityYaw(SteveNPC\Collider), 0
+	Local distToPlayer# = EntityDistance(SteveNPC\Collider, Collider)
+
+	; After coffee, Steve should lead to elevator
+	If GetStoryFlag(FLAG_COFFEE_WITH_STEVE) = 1 And GetStoryFlag(FLAG_SAW_HELICOPTERS) = 0 Then
+		SteveState = STEVE_STATE_LEADING
+
+		; Find nearest elevator room
+		Local elevRoom.Rooms = Null
+		Local minDist# = 99999.0
+		For r.Rooms = Each Rooms
+			If r\RoomTemplate <> Null Then
+				If Instr(Lower(r\RoomTemplate\Name), "elevator") > 0 Then
+					Local d# = EntityDistance(SteveNPC\Collider, r\obj)
+					If d < minDist Then
+						minDist = d
+						elevRoom = r
+					EndIf
+				EndIf
+			EndIf
+		Next
+
+		If elevRoom <> Null Then
+			SteveTargetX = EntityX(elevRoom\obj)
+			SteveTargetZ = EntityZ(elevRoom\obj)
+		EndIf
+	Else
+		SteveState = STEVE_STATE_FOLLOWING
 	EndIf
+
+	; Update Steve's behavior based on state
+	Select SteveState
+		Case STEVE_STATE_IDLE
+			; Just stand and face player
+			SteveNPC\State = 7
+			If distToPlayer < 6.0 Then
+				PointEntity SteveNPC\Collider, Collider
+				RotateEntity SteveNPC\Collider, 0, EntityYaw(SteveNPC\Collider), 0
+			EndIf
+
+		Case STEVE_STATE_FOLLOWING
+			; Follow behind player
+			SteveNPC\State = 7
+			If distToPlayer > 4.0 Then
+				; Move towards player
+				SteveNPC\State = 3  ; pathfinding state
+				SteveNPC\CurrSpeed = 0.015
+				PointEntity SteveNPC\Collider, Collider
+				RotateEntity SteveNPC\Collider, 0, EntityYaw(SteveNPC\Collider), 0
+				MoveEntity SteveNPC\Collider, 0, 0, SteveNPC\CurrSpeed * FPSfactor
+			EndIf
+
+		Case STEVE_STATE_LEADING
+			; Lead player to target
+			Local distToTarget# = Sqr((EntityX(SteveNPC\Collider) - SteveTargetX)^2 + (EntityZ(SteveNPC\Collider) - SteveTargetZ)^2)
+
+			If distToTarget > 2.0 Then
+				; Walk towards target
+				SteveNPC\State = 3
+				SteveNPC\CurrSpeed = 0.012
+
+				; Face target
+				Local angleToTarget# = ATan2(SteveTargetX - EntityX(SteveNPC\Collider), SteveTargetZ - EntityZ(SteveNPC\Collider))
+				RotateEntity SteveNPC\Collider, 0, angleToTarget, 0
+				MoveEntity SteveNPC\Collider, 0, 0, SteveNPC\CurrSpeed * FPSfactor
+
+				; Wait if player is too far
+				If distToPlayer > 8.0 Then
+					SteveState = STEVE_STATE_WAITING
+				EndIf
+			Else
+				; Arrived at destination
+				SteveNPC\State = 7
+				SteveState = STEVE_STATE_WAITING
+			EndIf
+
+		Case STEVE_STATE_WAITING
+			; Wait for player to catch up
+			SteveNPC\State = 7
+			PointEntity SteveNPC\Collider, Collider
+			RotateEntity SteveNPC\Collider, 0, EntityYaw(SteveNPC\Collider), 0
+
+			If distToPlayer < 5.0 Then
+				SteveState = STEVE_STATE_LEADING
+			EndIf
+	End Select
 End Function
 
 ; ============================================================================
@@ -604,6 +685,7 @@ Function UpdateProjectMirror()
 			SpawnSteveInCafeteria()
 		EndIf
 		DisableSCPsBeforeBreach()
+		RemoveElevatorCorpses()
 		UpdateSteveNPC()
 	EndIf
 
