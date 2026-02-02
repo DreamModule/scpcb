@@ -481,6 +481,38 @@ Function UpdateSteveNPC()
 				SteveState = STEVE_STATE_LEADING
 			EndIf
 	End Select
+
+	; Steve opens doors in front of him (has high-level keycard)
+	SteveOpenDoorsInFront()
+End Function
+
+; Steve can open/unlock doors in front of him (he has security clearance)
+Function SteveOpenDoorsInFront()
+	If SteveNPC = Null Then Return
+	If SteveState = STEVE_STATE_IDLE Then Return
+
+	Local steveX# = EntityX(SteveNPC\Collider)
+	Local steveY# = EntityY(SteveNPC\Collider)
+	Local steveZ# = EntityZ(SteveNPC\Collider)
+
+	For d.Doors = Each Doors
+		If d\obj <> 0 Then
+			Local doorDist# = EntityDistance(SteveNPC\Collider, d\obj)
+
+			; If Steve is close to a door
+			If doorDist < 2.5 Then
+				; Unlock if locked (Steve has clearance up to level 3)
+				If d\locked And d\KeyCard <= 3 Then
+					d\locked = False
+				EndIf
+
+				; Open the door if unlocked and closed
+				If d\locked = False And d\open = False Then
+					d\open = True
+				EndIf
+			EndIf
+		EndIf
+	Next
 End Function
 
 ; ============================================================================

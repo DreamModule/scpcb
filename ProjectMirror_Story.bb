@@ -939,14 +939,14 @@ Function SetupDay1Dialogs()
 	opt = AddDialogOption(node, "The less you know, the better you sleep.", -1, -1, -1, 0)
 	opt = AddDialogOption(node, "I'll tell you someday. Not now.", -1, 2, -1, 0)
 
-	; --- HELICOPTERS AT GATE A ---
+	; --- TIME TO GO ---
 
-	node = CreateDialogNode(6, "Steve", "*looking at helicopter* That's some cargo. What is that thing? Some kind of equipment?", "", "")
-	opt = AddDialogOption(node, "Looks like medical equipment.", 7, 0, -1, 0)
-	opt = AddDialogOption(node, "Not our problem.", -1, -1, -1, 0)
+	node = CreateDialogNode(6, "Steve", "*finishes coffee* Alright, time to move. Convoy's in 20 minutes. Follow me to the elevator.", "", "")
+	opt = AddDialogOption(node, "Lead the way.", 7, 0, -1, 0)
+	opt = AddDialogOption(node, "Right behind you.", 7, 0, -1, 0)
 
-	node = CreateDialogNode(7, "Steve", "Toys for the eggheads... *sighs* Alright, let's head back. Convoy in 20 minutes.", "", "")
-	AddDialogOption(node, "[Head back]", -1, 0, -1, 0)
+	node = CreateDialogNode(7, "Steve", "*stands up* Stay close. These corridors can get confusing.", "", "")
+	AddDialogOption(node, "[Follow Steve]", -1, 0, -1, 0)
 
 	; --- CONVOY TO SCP-999 ---
 
