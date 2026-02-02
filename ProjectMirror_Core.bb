@@ -357,14 +357,14 @@ Function RemoveElevatorCorpses()
 	If CorpsesRemovedOnce Then Return
 
 	For n.NPCs = Each NPCs
-		If n = Null Then Continue
-
-		; D-Class in dead state (State 8 = dead/corpse)
-		If n\NPCtype = NPCtypeD And n\State = 8 Then
-			; Remove corpse
-			If n\obj <> 0 Then HideEntity n\obj
-			If n\Collider <> 0 Then PositionEntity n\Collider, 0, -500, 0
-			DebugLog "Removed D-Class corpse (pre-breach)"
+		If n <> Null Then
+			; D-Class in dead state (State 8 = dead/corpse)
+			If n\NPCtype = NPCtypeD And n\State = 8 Then
+				; Remove corpse
+				If n\obj <> 0 Then HideEntity n\obj
+				If n\Collider <> 0 Then PositionEntity n\Collider, 0, -500, 0
+				DebugLog "Removed D-Class corpse (pre-breach)"
+			EndIf
 		EndIf
 	Next
 
@@ -380,15 +380,15 @@ Function DisableSCPsBeforeBreach()
 
 	; First pass - hide dangerous SCPs (don't delete in loop!)
 	For n.NPCs = Each NPCs
-		If n = Null Then Continue
-
-		Select n\NPCtype
-			Case NPCtype173, NPCtypeOldMan, NPCtype096, NPCtype049, NPCtype939
-				; Hide and move far away (don't delete!)
-				If n\obj <> 0 Then HideEntity n\obj
-				If n\Collider <> 0 Then PositionEntity n\Collider, 0, -500, 0
-				n\State = 0
-		End Select
+		If n <> Null Then
+			Select n\NPCtype
+				Case NPCtype173, NPCtypeOldMan, NPCtype096, NPCtype049, NPCtype939
+					; Hide and move far away (don't delete!)
+					If n\obj <> 0 Then HideEntity n\obj
+					If n\Collider <> 0 Then PositionEntity n\Collider, 0, -500, 0
+					n\State = 0
+			End Select
+		EndIf
 	Next
 
 	DebugLog "SCPs disabled for pre-breach"
