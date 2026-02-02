@@ -46,6 +46,12 @@ Global RadioStaticAlpha# = 0.0
 Global CompassEnabled% = True
 Global CompassY% = 50
 
+; GPS Line system (3D path markers)
+Const GPS_MAX_MARKERS% = 20
+Global GPSMarkers%[GPS_MAX_MARKERS]
+Global GPSMarkersActive% = False
+Global GPSUpdateTimer# = 0.0
+
 ; karma indicator
 Global KarmaChangeVisible% = False
 Global KarmaChangeAmount% = 0
@@ -572,69 +578,122 @@ End Function
 Function RenderNavigationArrow(gw%, gh%)
 	If Not NavigationActive Then Return
 
-	Local x% = gw - 80
+	; Update 3D GPS line
+	UpdateGPSLine()
+
+	; Also show small HUD indicator with distance
+	Local x% = gw - 60
 	Local y% = 100
 
-	; Get distance to target
 	Local dist# = GetNavigationDistance()
 
-	; Background box
+	; Small HUD box
 	Color 0, 0, 0
-	Rect x - 35, y - 35, 70, 75, True
+	Rect x - 30, y - 15, 60, 50, True
+	Color 0, 200, 100
+	Rect x - 30, y - 15, 60, 50, False
 
-	; Border (yellow)
-	Color 200, 180, 50
-	Rect x - 35, y - 35, 70, 75, False
+	; GPS text
+	Color 0, 255, 100
+	Text x - StringWidth("GPS") / 2, y - 12, "GPS"
 
-	; Calculate direction to target
-	Local dx# = NavigationTargetX - EntityX(Collider)
-	Local dz# = NavigationTargetZ - EntityZ(Collider)
-	Local targetAngle# = ATan2(dz, dx)  ; Note: swapped for proper orientation
-	Local playerYaw# = EntityYaw(Collider)
-
-	; Get relative angle (where to look)
-	Local relAngle# = targetAngle + playerYaw + 90.0
-
-	; Convert to radians for drawing
-	Local rad# = relAngle * 0.01745329  ; Pi/180
-
-	; Draw arrow pointing to target
-	Local arrowLen# = 20.0
-	Local tipX# = x + Sin(rad) * arrowLen
-	Local tipY# = y - Cos(rad) * arrowLen
-
-	; Arrow base
-	Local baseX# = x - Sin(rad) * 8.0
-	Local baseY# = y + Cos(rad) * 8.0
-
-	; Arrow wings
-	Local wingRad# = rad + 1.5708  ; 90 degrees
-	Local wing1X# = baseX + Sin(wingRad) * 10.0
-	Local wing1Y# = baseY - Cos(wingRad) * 10.0
-	Local wing2X# = baseX - Sin(wingRad) * 10.0
-	Local wing2Y# = baseY + Cos(wingRad) * 10.0
-
-	; Draw yellow arrow
-	Color 255, 220, 50
-	Line Int(tipX), Int(tipY), Int(wing1X), Int(wing1Y)
-	Line Int(tipX), Int(tipY), Int(wing2X), Int(wing2Y)
-	Line Int(wing1X), Int(wing1Y), Int(wing2X), Int(wing2Y)
-
-	; Fill arrow
-	Line Int(tipX), Int(tipY), Int(baseX), Int(baseY)
-
-	; Distance text
+	; Distance
 	Color 200, 200, 200
 	Local distStr$ = Int(dist) + "m"
-	Text x - StringWidth(distStr) / 2, y + 22, distStr
+	Text x - StringWidth(distStr) / 2, y + 5, distStr
 
 	; Target name
 	If NavigationTargetName <> "" Then
-		Color 255, 220, 100
+		Color 0, 200, 100
 		Local name$ = NavigationTargetName
-		If Len(name) > 8 Then name = Left(name, 8) + ".."
-		Text x - StringWidth(name) / 2, y + 34, name
+		If Len(name) > 6 Then name = Left(name, 6) + ".."
+		Text x - StringWidth(name) / 2, y + 20, name
 	EndIf
+End Function
+
+; Create/Update GPS line markers on the ground
+Function UpdateGPSLine()
+	If Not NavigationActive Then
+		HideGPSMarkers()
+		Return
+	EndIf
+
+	GPSUpdateTimer = GPSUpdateTimer + FPSfactor
+	If GPSUpdateTimer < 5.0 Then Return  ; Update every few frames
+	GPSUpdateTimer = 0.0
+
+	Local px# = EntityX(Collider)
+	Local py# = EntityY(Collider) - 0.3  ; Slightly below player (on floor)
+	Local pz# = EntityZ(Collider)
+
+	Local tx# = NavigationTargetX
+	Local tz# = NavigationTargetZ
+
+	Local dist# = Sqr((tx - px) * (tx - px) + (tz - pz) * (tz - pz))
+
+	; Number of markers based on distance
+	Local numMarkers% = Min(Int(dist / 2.0), GPS_MAX_MARKERS)
+	If numMarkers < 2 Then numMarkers = 2
+
+	; Create markers if needed
+	If Not GPSMarkersActive Then
+		CreateGPSMarkers()
+	EndIf
+
+	; Position markers along the path
+	Local i%
+	For i = 0 To GPS_MAX_MARKERS - 1
+		If i < numMarkers Then
+			Local t# = Float(i) / Float(numMarkers - 1)
+			Local mx# = px + (tx - px) * t
+			Local mz# = pz + (tz - pz) * t
+
+			If GPSMarkers[i] <> 0 Then
+				PositionEntity GPSMarkers[i], mx, py, mz
+				ShowEntity GPSMarkers[i]
+			EndIf
+		Else
+			If GPSMarkers[i] <> 0 Then
+				HideEntity GPSMarkers[i]
+			EndIf
+		EndIf
+	Next
+End Function
+
+Function CreateGPSMarkers()
+	Local i%
+	For i = 0 To GPS_MAX_MARKERS - 1
+		If GPSMarkers[i] = 0 Then
+			; Create a small green sprite as GPS marker
+			GPSMarkers[i] = CreateSprite()
+			ScaleSprite GPSMarkers[i], 0.1, 0.1
+			EntityColor GPSMarkers[i], 0, 255, 100
+			EntityAlpha GPSMarkers[i], 0.7
+			EntityFX GPSMarkers[i], 1 + 8  ; Full bright + no fog
+			HideEntity GPSMarkers[i]
+		EndIf
+	Next
+	GPSMarkersActive = True
+End Function
+
+Function HideGPSMarkers()
+	Local i%
+	For i = 0 To GPS_MAX_MARKERS - 1
+		If GPSMarkers[i] <> 0 Then
+			HideEntity GPSMarkers[i]
+		EndIf
+	Next
+End Function
+
+Function FreeGPSMarkers()
+	Local i%
+	For i = 0 To GPS_MAX_MARKERS - 1
+		If GPSMarkers[i] <> 0 Then
+			FreeEntity GPSMarkers[i]
+			GPSMarkers[i] = 0
+		EndIf
+	Next
+	GPSMarkersActive = False
 End Function
 
 ; ============================================================================

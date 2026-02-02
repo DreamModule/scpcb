@@ -315,23 +315,13 @@ Function SpawnSteveInCafeteria()
 	If SteveSpawned Then Return
 	If CurrentDay = 3 Then Return  ; Steve is dead on Day 3
 
-	Local cafeRoom.Rooms = Null
+	; Spawn Steve directly in front of player, facing the player
+	Local playerYaw# = EntityYaw(Collider)
+	Local spawnDist# = 2.0  ; 2 meters in front
 
-	For r.Rooms = Each Rooms
-		If r\RoomTemplate <> Null Then
-			If Lower(r\RoomTemplate\Name) = "room2cafeteria" Then
-				cafeRoom = r
-				Exit
-			EndIf
-		EndIf
-	Next
-
-	If cafeRoom = Null Then Return
-
-	; Spawn Steve in cafeteria room (use room coordinates, not player position)
-	Local steveX# = EntityX(cafeRoom\obj) + 2.0
-	Local steveY# = cafeRoom\y + 0.5
-	Local steveZ# = EntityZ(cafeRoom\obj) + 2.0
+	Local steveX# = EntityX(Collider) + Sin(playerYaw) * spawnDist
+	Local steveY# = EntityY(Collider)
+	Local steveZ# = EntityZ(Collider) + Cos(playerYaw) * spawnDist
 
 	SteveNPC = CreateNPC(NPCtypeGuard, steveX, steveY, steveZ)
 
@@ -341,6 +331,10 @@ Function SpawnSteveInCafeteria()
 	EndIf
 
 	If SteveNPC <> Null Then
+		; Face the player
+		PointEntity SteveNPC\Collider, Collider
+		RotateEntity SteveNPC\Collider, 0, EntityYaw(SteveNPC\Collider), 0
+
 		; Set Steve to friendly idle state
 		SteveNPC\State = 7  ; stationary
 		SteveNPC\State3 = 0  ; not targeting player
@@ -349,7 +343,7 @@ Function SpawnSteveInCafeteria()
 		SteveSpawned = True
 		SetStoryFlag(FLAG_STEVE_MET, 1)
 
-		DebugLog "Steve spawned near player"
+		DebugLog "Steve spawned in front of player"
 	EndIf
 End Function
 
@@ -394,6 +388,8 @@ Function DisableSCPsBeforeBreach()
 	Next
 End Function
 
+Global SteveElevatorFound% = False
+
 Function UpdateSteveNPC()
 	If SteveNPC = Null Then Return
 	If CurrentDay = 3 Then Return
@@ -401,32 +397,49 @@ Function UpdateSteveNPC()
 	; Keep Steve friendly
 	SteveNPC\State3 = 0  ; not hostile
 
+	; DON'T MOVE while dialog is active - just face player and idle
+	If DialogActive Then
+		SteveNPC\State = 7
+		SteveNPC\CurrSpeed = 0
+		PointEntity SteveNPC\Collider, Collider
+		RotateEntity SteveNPC\Collider, 0, EntityYaw(SteveNPC\Collider), 0
+		Return
+	EndIf
+
 	Local distToPlayer# = EntityDistance(SteveNPC\Collider, Collider)
 
-	; After coffee, Steve should lead to elevator
-	If GetStoryFlag(FLAG_COFFEE_WITH_STEVE) = 1 And GetStoryFlag(FLAG_SAW_HELICOPTERS) = 0 Then
+	; Determine Steve's state based on story progress
+	If GetStoryFlag(FLAG_COFFEE_WITH_STEVE) = 0 Then
+		; Before coffee dialog finished - IDLE
+		SteveState = STEVE_STATE_IDLE
+	ElseIf GetStoryFlag(FLAG_SAW_HELICOPTERS) = 0 Then
+		; After coffee, before reaching elevator - LEAD to elevator
 		SteveState = STEVE_STATE_LEADING
 
-		; Find nearest elevator room
-		Local elevRoom.Rooms = Null
-		Local minDist# = 99999.0
-		For r.Rooms = Each Rooms
-			If r\RoomTemplate <> Null Then
-				If Instr(Lower(r\RoomTemplate\Name), "elevator") > 0 Then
-					Local d# = EntityDistance(SteveNPC\Collider, r\obj)
-					If d < minDist Then
-						minDist = d
-						elevRoom = r
+		; Find elevator ONCE
+		If Not SteveElevatorFound Then
+			Local elevRoom.Rooms = Null
+			Local minDist# = 99999.0
+			For r.Rooms = Each Rooms
+				If r\RoomTemplate <> Null Then
+					If Instr(Lower(r\RoomTemplate\Name), "elevator") > 0 Then
+						Local d# = EntityDistance(SteveNPC\Collider, r\obj)
+						If d < minDist Then
+							minDist = d
+							elevRoom = r
+						EndIf
 					EndIf
 				EndIf
+			Next
+			If elevRoom <> Null Then
+				SteveTargetX = EntityX(elevRoom\obj)
+				SteveTargetZ = EntityZ(elevRoom\obj)
+				SteveElevatorFound = True
+				DebugLog "Steve target: elevator at " + SteveTargetX + ", " + SteveTargetZ
 			EndIf
-		Next
-
-		If elevRoom <> Null Then
-			SteveTargetX = EntityX(elevRoom\obj)
-			SteveTargetZ = EntityZ(elevRoom\obj)
 		EndIf
 	Else
+		; After helicopter scene - FOLLOW player
 		SteveState = STEVE_STATE_FOLLOWING
 	EndIf
 
@@ -434,44 +447,35 @@ Function UpdateSteveNPC()
 	Select SteveState
 		Case STEVE_STATE_IDLE
 			; Just stand and face player - idle animation
-			SteveNPC\State = 7  ; idle state
+			SteveNPC\State = 7
 			SteveNPC\CurrSpeed = 0
-			If distToPlayer < 6.0 Then
-				PointEntity SteveNPC\Collider, Collider
-				RotateEntity SteveNPC\Collider, 0, EntityYaw(SteveNPC\Collider), 0
-			EndIf
+			PointEntity SteveNPC\Collider, Collider
+			RotateEntity SteveNPC\Collider, 0, EntityYaw(SteveNPC\Collider), 0
 
 		Case STEVE_STATE_FOLLOWING
 			; Follow behind player
 			If distToPlayer > 4.0 Then
-				; Walk towards player - State 10 = walking with animation
-				SteveNPC\State = 10
+				SteveNPC\State = 10  ; walking
 				SteveNPC\CurrSpeed = 0.015
 				PointEntity SteveNPC\Collider, Collider
 				RotateEntity SteveNPC\Collider, 0, EntityYaw(SteveNPC\Collider), 0
 			Else
-				; Close enough - stop
 				SteveNPC\State = 7
 				SteveNPC\CurrSpeed = 0
 			EndIf
 
 		Case STEVE_STATE_LEADING
-			; Lead player to target
 			Local distToTarget# = Sqr((EntityX(SteveNPC\Collider) - SteveTargetX)^2 + (EntityZ(SteveNPC\Collider) - SteveTargetZ)^2)
 
 			; Wait if player is too far behind
 			If distToPlayer > 8.0 Then
 				SteveState = STEVE_STATE_WAITING
 			ElseIf distToTarget > 2.0 Then
-				; Walk towards target - State 10 = walking with animation
-				SteveNPC\State = 10
+				SteveNPC\State = 10  ; walking
 				SteveNPC\CurrSpeed = 0.012
-
-				; Face target direction
 				Local angleToTarget# = ATan2(SteveTargetX - EntityX(SteveNPC\Collider), SteveTargetZ - EntityZ(SteveNPC\Collider))
 				RotateEntity SteveNPC\Collider, 0, angleToTarget, 0
 			Else
-				; Arrived at destination
 				SteveNPC\State = 7
 				SteveNPC\CurrSpeed = 0
 				SteveState = STEVE_STATE_WAITING
