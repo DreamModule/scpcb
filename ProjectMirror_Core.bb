@@ -328,12 +328,17 @@ Function SpawnSteveInCafeteria()
 
 	If cafeRoom = Null Then Return
 
-	; Spawn Steve AWAY from player (offset by 3 meters)
-	Local steveX# = EntityX(Collider) + 3.0
-	Local steveY# = 0.5
-	Local steveZ# = EntityZ(Collider) + 2.0
+	; Spawn Steve in cafeteria room (use room coordinates, not player position)
+	Local steveX# = EntityX(cafeRoom\obj) + 2.0
+	Local steveY# = cafeRoom\y + 0.5
+	Local steveZ# = EntityZ(cafeRoom\obj) + 2.0
 
 	SteveNPC = CreateNPC(NPCtypeGuard, steveX, steveY, steveZ)
+
+	; Make sure model is visible
+	If SteveNPC <> Null And SteveNPC\obj <> 0 Then
+		ShowEntity SteveNPC\obj
+	EndIf
 
 	If SteveNPC <> Null Then
 		; Set Steve to friendly idle state
@@ -428,8 +433,9 @@ Function UpdateSteveNPC()
 	; Update Steve's behavior based on state
 	Select SteveState
 		Case STEVE_STATE_IDLE
-			; Just stand and face player
-			SteveNPC\State = 7
+			; Just stand and face player - idle animation
+			SteveNPC\State = 7  ; idle state
+			SteveNPC\CurrSpeed = 0
 			If distToPlayer < 6.0 Then
 				PointEntity SteveNPC\Collider, Collider
 				RotateEntity SteveNPC\Collider, 0, EntityYaw(SteveNPC\Collider), 0
@@ -437,43 +443,44 @@ Function UpdateSteveNPC()
 
 		Case STEVE_STATE_FOLLOWING
 			; Follow behind player
-			SteveNPC\State = 7
 			If distToPlayer > 4.0 Then
-				; Move towards player
-				SteveNPC\State = 3  ; pathfinding state
+				; Walk towards player - State 10 = walking with animation
+				SteveNPC\State = 10
 				SteveNPC\CurrSpeed = 0.015
 				PointEntity SteveNPC\Collider, Collider
 				RotateEntity SteveNPC\Collider, 0, EntityYaw(SteveNPC\Collider), 0
-				MoveEntity SteveNPC\Collider, 0, 0, SteveNPC\CurrSpeed * FPSfactor
+			Else
+				; Close enough - stop
+				SteveNPC\State = 7
+				SteveNPC\CurrSpeed = 0
 			EndIf
 
 		Case STEVE_STATE_LEADING
 			; Lead player to target
 			Local distToTarget# = Sqr((EntityX(SteveNPC\Collider) - SteveTargetX)^2 + (EntityZ(SteveNPC\Collider) - SteveTargetZ)^2)
 
-			If distToTarget > 2.0 Then
-				; Walk towards target
-				SteveNPC\State = 3
+			; Wait if player is too far behind
+			If distToPlayer > 8.0 Then
+				SteveState = STEVE_STATE_WAITING
+			ElseIf distToTarget > 2.0 Then
+				; Walk towards target - State 10 = walking with animation
+				SteveNPC\State = 10
 				SteveNPC\CurrSpeed = 0.012
 
-				; Face target
+				; Face target direction
 				Local angleToTarget# = ATan2(SteveTargetX - EntityX(SteveNPC\Collider), SteveTargetZ - EntityZ(SteveNPC\Collider))
 				RotateEntity SteveNPC\Collider, 0, angleToTarget, 0
-				MoveEntity SteveNPC\Collider, 0, 0, SteveNPC\CurrSpeed * FPSfactor
-
-				; Wait if player is too far
-				If distToPlayer > 8.0 Then
-					SteveState = STEVE_STATE_WAITING
-				EndIf
 			Else
 				; Arrived at destination
 				SteveNPC\State = 7
+				SteveNPC\CurrSpeed = 0
 				SteveState = STEVE_STATE_WAITING
 			EndIf
 
 		Case STEVE_STATE_WAITING
-			; Wait for player to catch up
+			; Wait for player to catch up - idle animation
 			SteveNPC\State = 7
+			SteveNPC\CurrSpeed = 0
 			PointEntity SteveNPC\Collider, Collider
 			RotateEntity SteveNPC\Collider, 0, EntityYaw(SteveNPC\Collider), 0
 
