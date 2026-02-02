@@ -219,7 +219,7 @@ End Type
 Global DialogBoxTexture% = 0
 Global DialogFont% = 0
 Global DialogSelectedOption% = 0
-Global DialogTypewriterSpeed# = 0.05
+Global DialogTypewriterSpeed# = 0.5  ; Faster dialog text (was 0.05)
 
 Dim DialogOptions.DialogOption(MAX_DIALOG_OPTIONS)
 Dim DialogNodeCache.DialogNode(MAX_DIALOG_NODES)
@@ -705,14 +705,18 @@ End Function
 Function UpdateNavigationGuidance()
 	; Day 1 navigation
 	If CurrentDay = 1 Then
-		If GetStoryFlag(FLAG_COFFEE_WITH_STEVE) = 1 And GetStoryFlag(FLAG_SAW_HELICOPTERS) = 0 Then
-			; After coffee, go see helicopters
-			SetNavigationToRoom("room2servers")
-			NavigationTargetName = "Helipad"
+		If GetStoryFlag(FLAG_COFFEE_WITH_STEVE) = 0 Then
+			; Start - talk to Steve
+			SetNavigationToRoom("room2cafeteria")
+			NavigationTargetName = "Steve"
+		ElseIf GetStoryFlag(FLAG_COFFEE_WITH_STEVE) = 1 And GetStoryFlag(FLAG_SAW_HELICOPTERS) = 0 Then
+			; After coffee - go to elevator, then helicopters
+			SetNavigationToRoom("room2elevator")
+			NavigationTargetName = "Elevator"
 		ElseIf GetStoryFlag(FLAG_SAW_HELICOPTERS) = 1 And GetStoryFlag(FLAG_ESCORTED_DCLASS) = 0 Then
-			; After helicopters, escort D-Class
+			; After helicopters - escort D-Class
 			SetNavigationToRoom("room2closets")
-			NavigationTargetName = "D-Class Cells"
+			NavigationTargetName = "D-Class"
 		ElseIf GetStoryFlag(FLAG_ESCORTED_DCLASS) = 1 And GetStoryFlag(FLAG_SAW_999) = 0 Then
 			; Escort to 999
 			SetNavigationToRoom("room2sl")

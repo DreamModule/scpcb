@@ -164,9 +164,9 @@ Function RenderMirrorUI()
 		RenderRadioMessage(gw, gh)
 	EndIf
 
-	; === COMPASS / NAVIGATION ===
+	; === NAVIGATION ARROW ONLY (no compass) ===
 	If CompassEnabled Then
-		RenderCompass(gw, gh)
+		; Removed compass (S W E N) - only show navigation arrow
 		RenderNavigationArrow(gw, gh)
 	EndIf
 End Function
@@ -572,59 +572,68 @@ End Function
 Function RenderNavigationArrow(gw%, gh%)
 	If Not NavigationActive Then Return
 
-	Local x% = gw - 100
-	Local y% = 120
+	Local x% = gw - 80
+	Local y% = 100
 
-	; Get angle to target
-	Local angle# = GetNavigationAngle()
+	; Get distance to target
 	Local dist# = GetNavigationDistance()
 
 	; Background box
 	Color 0, 0, 0
-	Rect x - 40, y - 40, 80, 90, True
+	Rect x - 35, y - 35, 70, 75, True
 
-	; Border
-	Color 80, 80, 50
-	Rect x - 40, y - 40, 80, 90, False
+	; Border (yellow)
+	Color 200, 180, 50
+	Rect x - 35, y - 35, 70, 75, False
 
-	; Title
-	Color 200, 200, 100
-	Text x - 35, y - 35, "NAV"
+	; Calculate direction to target
+	Local dx# = NavigationTargetX - EntityX(Collider)
+	Local dz# = NavigationTargetZ - EntityZ(Collider)
+	Local targetAngle# = ATan2(dz, dx)  ; Note: swapped for proper orientation
+	Local playerYaw# = EntityYaw(Collider)
+
+	; Get relative angle (where to look)
+	Local relAngle# = targetAngle + playerYaw + 90.0
+
+	; Convert to radians for drawing
+	Local rad# = relAngle * 0.01745329  ; Pi/180
 
 	; Draw arrow pointing to target
-	Local arrowLen# = 25.0
-	Local radAngle# = (angle - 90.0) * 3.14159 / 180.0  ; Convert to radians, adjust for screen coords
+	Local arrowLen# = 20.0
+	Local tipX# = x + Sin(rad) * arrowLen
+	Local tipY# = y - Cos(rad) * arrowLen
 
-	Local arrowX1# = x + Cos(radAngle) * arrowLen
-	Local arrowY1# = y + Sin(radAngle) * arrowLen
-	Local arrowX2# = x - Cos(radAngle) * 5.0
-	Local arrowY2# = y - Sin(radAngle) * 5.0
+	; Arrow base
+	Local baseX# = x - Sin(rad) * 8.0
+	Local baseY# = y + Cos(rad) * 8.0
 
-	; Arrow color (yellow/gold)
+	; Arrow wings
+	Local wingRad# = rad + 1.5708  ; 90 degrees
+	Local wing1X# = baseX + Sin(wingRad) * 10.0
+	Local wing1Y# = baseY - Cos(wingRad) * 10.0
+	Local wing2X# = baseX - Sin(wingRad) * 10.0
+	Local wing2Y# = baseY + Cos(wingRad) * 10.0
+
+	; Draw yellow arrow
 	Color 255, 220, 50
+	Line Int(tipX), Int(tipY), Int(wing1X), Int(wing1Y)
+	Line Int(tipX), Int(tipY), Int(wing2X), Int(wing2Y)
+	Line Int(wing1X), Int(wing1Y), Int(wing2X), Int(wing2Y)
 
-	; Draw arrow as triangle
-	Local perpAngle# = radAngle + 1.5708  ; 90 degrees in radians
-	Local arrowX3# = arrowX2 + Cos(perpAngle) * 8.0
-	Local arrowY3# = arrowY2 + Sin(perpAngle) * 8.0
-	Local arrowX4# = arrowX2 - Cos(perpAngle) * 8.0
-	Local arrowY4# = arrowY2 - Sin(perpAngle) * 8.0
-
-	Line Int(arrowX1), Int(arrowY1), Int(arrowX3), Int(arrowY3)
-	Line Int(arrowX1), Int(arrowY1), Int(arrowX4), Int(arrowY4)
-	Line Int(arrowX3), Int(arrowY3), Int(arrowX4), Int(arrowY4)
+	; Fill arrow
+	Line Int(tipX), Int(tipY), Int(baseX), Int(baseY)
 
 	; Distance text
-	Color 150, 150, 150
+	Color 200, 200, 200
 	Local distStr$ = Int(dist) + "m"
-	Text x - StringWidth(distStr) / 2, y + 25, distStr
+	Text x - StringWidth(distStr) / 2, y + 22, distStr
 
 	; Target name
 	If NavigationTargetName <> "" Then
-		Color 200, 200, 200
+		Color 255, 220, 100
 		Local name$ = NavigationTargetName
-		If Len(name) > 10 Then name = Left(name, 10) + ".."
-		Text x - StringWidth(name) / 2, y + 38, name
+		If Len(name) > 8 Then name = Left(name, 8) + ".."
+		Text x - StringWidth(name) / 2, y + 34, name
 	EndIf
 End Function
 

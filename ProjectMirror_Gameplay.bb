@@ -798,14 +798,21 @@ Function CheckElevatorFastTravel()
 End Function
 
 Function GetElevatorDestination$()
-	; Day 1 destinations
+	; Day 1 destinations - proper sequence
 	If CurrentDay = 1 Then
 		If GetStoryFlag(FLAG_COFFEE_WITH_STEVE) = 1 And GetStoryFlag(FLAG_SAW_HELICOPTERS) = 0 Then
-			Return "room2servers"  ; Helipad area
+			; After coffee - go see helicopters at Gate B area
+			SetStoryFlag(FLAG_SAW_HELICOPTERS, 1)  ; Mark as seen
+			Return "exit1"  ; Gate B area (helipad)
 		ElseIf GetStoryFlag(FLAG_SAW_HELICOPTERS) = 1 And GetStoryFlag(FLAG_ESCORTED_DCLASS) = 0 Then
+			; After helicopters - go to D-Class cells
 			Return "room2closets"  ; D-Class cells
+		ElseIf GetStoryFlag(FLAG_ESCORTED_DCLASS) = 1 And GetStoryFlag(FLAG_SAW_999) = 0 Then
+			; Escort D-Class to 999
+			Return "room2sl"  ; Light containment with 999
 		ElseIf GetStoryFlag(FLAG_SAW_999) = 1 Then
-			Return "room2cafeteria"  ; Back to cafeteria
+			; Back to cafeteria for evening
+			Return "room2cafeteria"
 		EndIf
 	EndIf
 

@@ -318,10 +318,10 @@ Function SpawnSteveInCafeteria()
 
 	If cafeRoom = Null Then Return
 
-	; Spawn Steve near player
-	Local steveX# = EntityX(cafeRoom\obj) + 2.0
+	; Spawn Steve in the center of the cafeteria (not in walls)
+	Local steveX# = EntityX(cafeRoom\obj)
 	Local steveY# = 0.5
-	Local steveZ# = EntityZ(cafeRoom\obj) - 1.0
+	Local steveZ# = EntityZ(cafeRoom\obj)
 
 	SteveNPC = CreateNPC(NPCtypeGuard, steveX, steveY, steveZ)
 
@@ -337,27 +337,56 @@ Function SpawnSteveInCafeteria()
 	EndIf
 End Function
 
-Function RemoveSCP066FromCafeteria()
-	; Remove any SCP-066 entities from cafeteria area (Day 1/2 pre-breach)
-	If CurrentDay = 3 Then Return  ; On Day 3 let the game run normally
+Function DisableSCPsBeforeBreach()
+	; Before the breach (Day 1 and 2), all SCPs should be contained
+	; Remove/disable dangerous SCPs that shouldn't be roaming
+	If CurrentDay = 3 Then Return  ; On Day 3 = breach, let SCPs roam
 
 	For n.NPCs = Each NPCs
-		If n\NPCtype = NPCtype066 Then
-			; Check if in cafeteria
-			For r.Rooms = Each Rooms
-				If r\RoomTemplate <> Null Then
-					If Lower(r\RoomTemplate\Name) = "room2cafeteria" Then
-						Local dist# = EntityDistance(n\Collider, r\obj)
-						If dist < 20.0 Then
-							; Remove this SCP-066
-							RemoveNPC(n)
-							DebugLog "Removed SCP-066 from cafeteria (pre-breach)"
-							Exit
-						EndIf
-					EndIf
-				EndIf
-			Next
-		EndIf
+		; Remove dangerous SCPs that shouldn't be out
+		Select n\NPCtype
+			Case NPCtype173  ; SCP-173 - should be in containment
+				HideEntity n\obj
+				PositionEntity n\Collider, 0, -500, 0  ; Move far away
+				n\State = 0
+				DebugLog "Disabled SCP-173 (pre-breach)"
+
+			Case NPCtypeOldMan  ; SCP-106 - should be in containment
+				HideEntity n\obj
+				PositionEntity n\Collider, 0, -500, 0
+				n\State = 0
+				DebugLog "Disabled SCP-106 (pre-breach)"
+
+			Case NPCtype096  ; SCP-096 - should be in containment
+				HideEntity n\obj
+				PositionEntity n\Collider, 0, -500, 0
+				n\State = 0
+				DebugLog "Disabled SCP-096 (pre-breach)"
+
+			Case NPCtype049  ; SCP-049 - should be in containment
+				HideEntity n\obj
+				PositionEntity n\Collider, 0, -500, 0
+				n\State = 0
+				DebugLog "Disabled SCP-049 (pre-breach)"
+
+			Case NPCtypeZombie  ; 049 zombies - shouldn't exist yet
+				RemoveNPC(n)
+				DebugLog "Removed zombie (pre-breach)"
+
+			Case NPCtype939  ; SCP-939 - should be in containment
+				HideEntity n\obj
+				PositionEntity n\Collider, 0, -500, 0
+				n\State = 0
+				DebugLog "Disabled SCP-939 (pre-breach)"
+
+			Case NPCtype066  ; SCP-066 - remove from cafeteria
+				RemoveNPC(n)
+				DebugLog "Removed SCP-066 (pre-breach)"
+
+			Case NPCtypeMTF  ; MTF shouldn't be here yet
+				RemoveNPC(n)
+				DebugLog "Removed MTF (pre-breach)"
+		End Select
 	Next
 End Function
 
@@ -574,7 +603,7 @@ Function UpdateProjectMirror()
 		If Not SteveSpawned Then
 			SpawnSteveInCafeteria()
 		EndIf
-		RemoveSCP066FromCafeteria()
+		DisableSCPsBeforeBreach()
 		UpdateSteveNPC()
 	EndIf
 
