@@ -386,6 +386,28 @@ Function DisableSCPsBeforeBreach()
 			End Select
 		EndIf
 	Next
+
+	; Also hide SCP-106 corrosion decals (type 0 = black goo)
+	For de.Decals = Each Decals
+		If de <> Null And de\ID = 0 Then
+			If de\obj <> 0 Then HideEntity de\obj
+		EndIf
+	Next
+
+	; Lower checkpoint door keycard requirements on Day 1/2 (level 3 instead of 5)
+	For r.Rooms = Each Rooms
+		If r\RoomTemplate <> Null Then
+			If Instr(Lower(r\RoomTemplate\Name), "checkpoint") > 0 Then
+				For i% = 0 To 3
+					If r\RoomDoors[i] <> Null Then
+						If r\RoomDoors[i]\KeyCard > 3 Then
+							r\RoomDoors[i]\KeyCard = 3
+						EndIf
+					EndIf
+				Next
+			EndIf
+		EndIf
+	Next
 End Function
 
 Global SteveElevatorFound% = False
@@ -493,8 +515,45 @@ Function UpdateSteveNPC()
 			EndIf
 	End Select
 
+	; Simple obstacle avoidance - if Steve is stuck, try to go around
+	If SteveNPC\State = 10 And SteveNPC\CurrSpeed > 0 Then
+		SteveObstacleAvoidance()
+	EndIf
+
 	; Steve opens doors in front of him (has high-level keycard)
 	SteveOpenDoorsInFront()
+End Function
+
+; Simple obstacle avoidance for Steve
+Global StevePrevX# = 0.0
+Global StevePrevZ# = 0.0
+Global SteveStuckTimer# = 0.0
+
+Function SteveObstacleAvoidance()
+	If SteveNPC = Null Then Return
+
+	Local curX# = EntityX(SteveNPC\Collider)
+	Local curZ# = EntityZ(SteveNPC\Collider)
+
+	; Check if Steve is stuck (hasn't moved much)
+	Local moveAmount# = Sqr((curX - StevePrevX)^2 + (curZ - StevePrevZ)^2)
+
+	If moveAmount < 0.001 Then
+		SteveStuckTimer = SteveStuckTimer + FPSfactor
+	Else
+		SteveStuckTimer = 0.0
+	EndIf
+
+	; If stuck for too long, try to turn and go around
+	If SteveStuckTimer > 35.0 Then  ; About 0.5 seconds
+		; Turn slightly to try to go around obstacle
+		Local currentYaw# = EntityYaw(SteveNPC\Collider)
+		RotateEntity SteveNPC\Collider, 0, currentYaw + 45.0, 0
+		SteveStuckTimer = 0.0
+	EndIf
+
+	StevePrevX = curX
+	StevePrevZ = curZ
 End Function
 
 ; Steve can open/unlock doors in front of him (he has security clearance)

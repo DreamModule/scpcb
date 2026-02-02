@@ -933,7 +933,7 @@ Function SetupDay1Dialogs()
 	opt = AddDialogOption(node, "Better not to know the details.", -1, 0, -1, 0)
 
 	node = CreateDialogNode(4, "Steve", "Oh, feeling adventurous! Fine, but quick. If the captain catches us - I don't know you.", "", "")
-	AddDialogOption(node, "Deal.", 6, 0, FLAG_SAW_HELICOPTERS, 1)
+	AddDialogOption(node, "Deal.", 6, 0, -1, 0)  ; Don't set FLAG_SAW_HELICOPTERS here!
 
 	node = CreateDialogNode(5, "Steve", "...you know something, don't you? About these... SCP objects?", "", "")
 	opt = AddDialogOption(node, "The less you know, the better you sleep.", -1, -1, -1, 0)
