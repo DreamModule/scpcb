@@ -48,6 +48,11 @@ Const MTF_STATE_BETRAY% = 4
 Global MTFBetrayalTriggered% = False
 Global MTFAlertLevel# = 0.0
 
+; === GUARD FRIENDSHIP SYSTEM ===
+; Markus is a guard - other guards should be friendly to him
+; MTF however are hostile (Day 3 - they hunt everyone during containment breach)
+Global GuardFriendshipEnabled% = True
+
 ; === LOCKDOWN SYSTEM ===
 Global FacilityLockdown% = False
 Dim LockedSectors%(8)
@@ -70,6 +75,9 @@ Function InitGameplayMechanics()
 
 	FacilityLockdown = False
 
+	; Markus is a guard - enable friendly guards
+	GuardFriendshipEnabled = True
+
 	For i% = 0 To 7
 		LockedSectors(i) = 0
 	Next
@@ -77,10 +85,98 @@ Function InitGameplayMechanics()
 	; naydyom tesla gates
 	FindAllTeslaGates()
 
+	; make existing guards friendly immediately
+	MakeAllGuardsFriendly()
+
 	DebugLog "Gameplay mechanics initialized"
 End Function
 
+; ============================================================================
+; GUARD FRIENDSHIP SYSTEM
+; Markus is a security guard - other guards recognize him as a colleague
+; Guards will NOT attack the player (they're fellow guards)
+; MTF are different - they follow orders from higher-ups and WILL attack during breach
+; ============================================================================
+
+Function UpdateGuardFriendship()
+	For n.NPCs = Each NPCs
+		If n\NPCtype = NPCtypeGuard Then
+			; Check if guard is in hostile state towards player
+			; State 1 = aiming and shooting at player
+			; State 11 = shooting while patrolling
+			If n\State = 1 Or n\State = 11 Then
+				; Force guard to friendly idle state
+				; State 4 = idle, looking around (non-hostile)
+				; State 7 = stationary guard (non-hostile)
+				n\State = 4
+				n\CurrSpeed = 0.0
+
+				; Reset any targeting on player
+				n\State3 = 0  ; clear "spotted player" flag
+
+				DebugLog "Guard made friendly - was in hostile state"
+			EndIf
+
+			; Also prevent guards from entering hostile state
+			; by clearing their enemy tracking if targeting player position
+			Local dist# = EntityDistance(n\Collider, Collider)
+			If dist < 15.0 Then
+				; Guard is close - make sure they stay friendly
+				; Don't let them track player as enemy
+				If n\EnemyX = EntityX(Collider) And n\EnemyZ = EntityZ(Collider) Then
+					n\EnemyX = 0.0
+					n\EnemyY = 0.0
+					n\EnemyZ = 0.0
+				EndIf
+			EndIf
+		EndIf
+
+		; Note: MTF (NPCtypeMTF) are NOT affected
+		; They follow Foundation orders and will attack during breach
+		; This is intentional - MTF are the antagonists in Day 3
+	Next
+End Function
+
+Function MakeAllGuardsFriendly()
+	; Called at init - ensure all guards start in friendly state
+	Local guardCount% = 0
+
+	For n.NPCs = Each NPCs
+		If n\NPCtype = NPCtypeGuard Then
+			; Set to friendly idle state
+			If n\State = 1 Or n\State = 11 Then
+				n\State = 4  ; idle
+			EndIf
+
+			; Clear any player targeting
+			n\State3 = 0
+
+			guardCount = guardCount + 1
+		EndIf
+	Next
+
+	If guardCount > 0 Then
+		DebugLog "Made " + guardCount + " guards friendly to Markus"
+	EndIf
+End Function
+
+Function SetGuardFriendship(enabled%)
+	GuardFriendshipEnabled = enabled
+
+	If enabled Then
+		MakeAllGuardsFriendly()
+		DebugLog "Guard friendship ENABLED - guards are now friendly"
+	Else
+		DebugLog "Guard friendship DISABLED - guards may be hostile"
+	EndIf
+End Function
+
 Function UpdateGameplayMechanics()
+	; guard friendship - Markus is a guard, other guards are friendly
+	If GuardFriendshipEnabled Then
+		UpdateGuardFriendship()
+	EndIf
+
 	; stealth
 	UpdateStealthSystem()
 
@@ -202,7 +298,7 @@ Function Update096Mechanic()
 
 		; preduprezhdenie
 		If Player096LookTimer > 15.0 And Player096LookTimer < 20.0 Then
-			AddNotification("NE SMOTRI NA NEGO!")
+			AddNotification("DON'T LOOK AT IT!")
 		EndIf
 	Else
 		Player096LookTimer = Max(Player096LookTimer - FPSfactor * 2.0, 0.0)
@@ -415,7 +511,7 @@ Function ArmNuke()
 	; blokiruem vse sektora
 	LockdownAllSectors()
 
-	AddNotification("BOEGOLOVKA ALPHA AKTIVIROVANA")
+	AddNotification("ALPHA WARHEAD ACTIVATED")
 End Function
 
 Function StartNukeCountdown(seconds#)

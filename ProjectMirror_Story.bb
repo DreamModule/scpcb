@@ -435,18 +435,18 @@ Function RenderDayTransition()
 
 		If DayTransitionTimer >= 70.0 And DayTransitionTimer < 210.0 Then
 			Color 200, 200, 200
-			Local dayText$ = "ДЕНЬ " + CurrentDay
+			Local dayText$ = "DAY " + CurrentDay
 			Local tw% = StringWidth(dayText)
 			Text (GraphicsWidth() - tw) / 2, GraphicsHeight() / 2 - 20, dayText
 
 			Local subtitle$ = ""
 			Select CurrentDay
 				Case 1
-					subtitle = "РУТИНА"
+					subtitle = "ROUTINE"
 				Case 2
-					subtitle = "ПРОТОКОЛ"
+					subtitle = "PROTOCOL"
 				Case 3
-					subtitle = "РАСПЛАТА"
+					subtitle = "RECKONING"
 			End Select
 
 			Color 150, 150, 150
@@ -695,6 +695,9 @@ Function RenderDialog()
 	If Not DialogActive Then Return
 	If CurrentDialogNode = Null Then Return
 
+	; Reset font to avoid ESC menu issues
+	AASetFont Font1
+
 	Local node.DialogNode = CurrentDialogNode
 	Local gw% = GraphicsWidth()
 	Local gh% = GraphicsHeight()
@@ -757,11 +760,11 @@ Function RenderDialog()
 
 		If optIndex = 0 Then
 			Color 150, 150, 150
-			Text textStartX, optY, "[ENTER - продолжить]"
+			Text textStartX, optY, "[ENTER - continue]"
 		EndIf
 	Else
 		Color 100, 100, 100
-		Text textStartX, boxY + boxHeight - 25, "[SPACE - пропустить]"
+		Text textStartX, boxY + boxHeight - 25, "[SPACE - skip]"
 	EndIf
 End Function
 
@@ -832,82 +835,82 @@ Function SetupDay1Dialogs()
 	Local node.DialogNode
 	Local opt.DialogOption
 
-	; --- УТРО: КОФЕ СО СТИВОМ ---
-	; Стив тоже охранник, напарник Маркуса
+	; --- MORNING: COFFEE WITH STEVE ---
+	; Steve is also a guard, Markus's partner
 
-	node = CreateDialogNode(1, "Steve", "Yo, Markus. Opjat' vertushki s utra spat' ne dayut. Govoryat, bol'shuyu shishku vezyut dlya testa.", "", "")
-	opt = AddDialogOption(node, "Rabota est' rabota, Steve.", 2, 0, FLAG_COFFEE_WITH_STEVE, 1)
-	opt = AddDialogOption(node, "Lish' by platili vovremia.", 3, -2, FLAG_COFFEE_WITH_STEVE, 1)
-	opt = AddDialogOption(node, "Poidem glyanem, poka nachal'stva net?", 4, 3, FLAG_COFFEE_WITH_STEVE, 1)
+	node = CreateDialogNode(1, "Steve", "Hey, Markus. Those choppers kept me up again. Word is they're bringing in some big shot for testing.", "", "")
+	opt = AddDialogOption(node, "Work is work, Steve.", 2, 0, FLAG_COFFEE_WITH_STEVE, 1)
+	opt = AddDialogOption(node, "As long as they pay on time.", 3, -2, FLAG_COFFEE_WITH_STEVE, 1)
+	opt = AddDialogOption(node, "Let's go take a look while the boss is away?", 4, 3, FLAG_COFFEE_WITH_STEVE, 1)
 
-	node = CreateDialogNode(2, "Steve", "Aga, filosof. Ladno, dopivai kofe - cherez chas konvoi. D-klassy sami sebya ne dovedut.", "", "")
-	AddDialogOption(node, "[Kivaesh']", -1, 0, -1, 0)
+	node = CreateDialogNode(2, "Steve", "Yeah, philosopher. Alright, finish your coffee - convoy in an hour. D-Class won't escort themselves.", "", "")
+	AddDialogOption(node, "[Nod]", -1, 0, -1, 0)
 
-	node = CreateDialogNode(3, "Steve", "*khekhaet* Tsenik ty, Markus. No ya tebya ponimau. Eta kontora... stranno tut vse.", "", "")
-	opt = AddDialogOption(node, "Strannee, chem ty dumaesh'.", 5, 0, -1, 0)
-	opt = AddDialogOption(node, "Luchshe ne znat' podrobnostei.", -1, 0, -1, 0)
+	node = CreateDialogNode(3, "Steve", "*chuckles* Cynic, aren't you, Markus. But I get it. This place... everything's weird here.", "", "")
+	opt = AddDialogOption(node, "Stranger than you think.", 5, 0, -1, 0)
+	opt = AddDialogOption(node, "Better not to know the details.", -1, 0, -1, 0)
 
-	node = CreateDialogNode(4, "Steve", "O, azart! Ladno, tol'ko bystro. Esli kapitan zametit - ya tebya ne znayu.", "", "")
-	AddDialogOption(node, "Dogovorilis'.", 6, 0, FLAG_SAW_HELICOPTERS, 1)
+	node = CreateDialogNode(4, "Steve", "Oh, feeling adventurous! Fine, but quick. If the captain catches us - I don't know you.", "", "")
+	AddDialogOption(node, "Deal.", 6, 0, FLAG_SAW_HELICOPTERS, 1)
 
-	node = CreateDialogNode(5, "Steve", "...ty chto-to znaesh', da? Pro eti... SCP-ob'ekty?", "", "")
-	opt = AddDialogOption(node, "Men'she znaesh' - krepche spish'.", -1, -1, -1, 0)
-	opt = AddDialogOption(node, "Kak-nibud' rasskazhu. Ne seichas.", -1, 2, -1, 0)
+	node = CreateDialogNode(5, "Steve", "...you know something, don't you? About these... SCP objects?", "", "")
+	opt = AddDialogOption(node, "The less you know, the better you sleep.", -1, -1, -1, 0)
+	opt = AddDialogOption(node, "I'll tell you someday. Not now.", -1, 2, -1, 0)
 
-	; --- ВЕРТОЛЁТЫ НА GATE A ---
+	; --- HELICOPTERS AT GATE A ---
 
-	node = CreateDialogNode(6, "Steve", "*smotrit na vertolet* Nichego sebe gruzovik. Chto eto voobshche? Kakaya-to ustanovka?", "", "")
-	opt = AddDialogOption(node, "Pohoze na medicinskoe oborudovanie.", 7, 0, -1, 0)
-	opt = AddDialogOption(node, "Ne nashi problemy.", -1, -1, -1, 0)
+	node = CreateDialogNode(6, "Steve", "*looking at helicopter* That's some cargo. What is that thing? Some kind of equipment?", "", "")
+	opt = AddDialogOption(node, "Looks like medical equipment.", 7, 0, -1, 0)
+	opt = AddDialogOption(node, "Not our problem.", -1, -1, -1, 0)
 
-	node = CreateDialogNode(7, "Steve", "Igrushki dlya yaitsegolovyh... *vzdyhaet* Ladno, poshli obratno. Konvoi cherez 20 minut.", "", "")
-	AddDialogOption(node, "[Vozvrashchaetes']", -1, 0, -1, 0)
+	node = CreateDialogNode(7, "Steve", "Toys for the eggheads... *sighs* Alright, let's head back. Convoy in 20 minutes.", "", "")
+	AddDialogOption(node, "[Head back]", -1, 0, -1, 0)
 
-	; --- КОНВОЙ К SCP-999 ---
+	; --- CONVOY TO SCP-999 ---
 
-	node = CreateDialogNode(10, "Steve", "Konvoi 'Miloserdie'. Tri D-klassa. Vedyom v Light Containment, k 999-mu.", "", "")
-	AddDialogOption(node, "999? Eto tot, kotoryi...", 11, 0, -1, 0)
-	AddDialogOption(node, "Ponyal. Poidem.", 12, 0, -1, 0)
+	node = CreateDialogNode(10, "Steve", "Convoy 'Mercy'. Three D-Class. Taking them to Light Containment, to 999.", "", "")
+	AddDialogOption(node, "999? That's the one that...", 11, 0, -1, 0)
+	AddDialogOption(node, "Got it. Let's go.", 12, 0, -1, 0)
 
-	node = CreateDialogNode(11, "Steve", "Aga, oranzhevyy blob. Bezobidnyi. Dazhe D-klassam razreshayut... obshchat'sya s nim. Terapiya, chto li.", "", "")
-	opt = AddDialogOption(node, "Horosho, chto est' chto-to nestrashnoye tut.", 12, 2, -1, 0)
-	opt = AddDialogOption(node, "Vsyo ravno strannaya kontora.", 12, 0, -1, 0)
+	node = CreateDialogNode(11, "Steve", "Yeah, the orange blob. Harmless. They even let D-Class... interact with it. Therapy, I guess.", "", "")
+	opt = AddDialogOption(node, "Good to have something not scary here.", 12, 2, -1, 0)
+	opt = AddDialogOption(node, "Still a weird place.", 12, 0, -1, 0)
 
-	node = CreateDialogNode(12, "Steve", "*D-klassam* Na nogi, gospoda. Ekskursiya nachinayetsya.", "", "")
-	AddDialogOption(node, "[Nachinayete konvoi]", -1, 0, FLAG_ESCORTED_DCLASS, 1)
+	node = CreateDialogNode(12, "Steve", "*to D-Class* On your feet, gentlemen. Field trip's starting.", "", "")
+	AddDialogOption(node, "[Start convoy]", -1, 0, FLAG_ESCORTED_DCLASS, 1)
 
-	; --- У SCP-999 ---
+	; --- AT SCP-999 ---
 
-	node = CreateDialogNode(20, "Steve", "*smotrit kak 999 obnimayet D-klassa* Smotri, kak oni raduyutsya. Mozhet, my tut ne tol'ko monstrov derzhim, a?", "", "")
-	opt = AddDialogOption(node, "Mozhet i tak. Redkii svetlyi moment.", 21, 3, FLAG_SAW_999, 1)
-	opt = AddDialogOption(node, "Ne rasslablyaisya. Eto vsyo eshcho SCP.", 22, 0, FLAG_SAW_999, 1)
-	opt = AddDialogOption(node, "*molcha nabludaesh'*", -1, 0, FLAG_SAW_999, 1)
+	node = CreateDialogNode(20, "Steve", "*watching 999 hug a D-Class* Look how happy they are. Maybe we don't just keep monsters here, huh?", "", "")
+	opt = AddDialogOption(node, "Maybe. A rare bright moment.", 21, 3, FLAG_SAW_999, 1)
+	opt = AddDialogOption(node, "Don't get soft. It's still an SCP.", 22, 0, FLAG_SAW_999, 1)
+	opt = AddDialogOption(node, "*watch silently*", -1, 0, FLAG_SAW_999, 1)
 
-	node = CreateDialogNode(21, "Steve", "Da... *pauza* Znaesh', inogda dumayu - zachem eto vsyo? A potom vizhu takoye, i... nu, ty ponyal.", "", "")
-	AddDialogOption(node, "Ponyal.", -1, 1, -1, 0)
+	node = CreateDialogNode(21, "Steve", "Yeah... *pause* You know, sometimes I wonder - what's all this for? Then I see something like this, and... well, you get it.", "", "")
+	AddDialogOption(node, "I get it.", -1, 1, -1, 0)
 
-	node = CreateDialogNode(22, "Steve", "*vzdyhaet* Ty prav, konechno. No dazhe nam inogda nuzhno... chto-to horosheye videt'.", "", "")
-	AddDialogOption(node, "[Kivaesh']", -1, 0, -1, 0)
+	node = CreateDialogNode(22, "Steve", "*sighs* You're right, of course. But even we need to see... something good sometimes.", "", "")
+	AddDialogOption(node, "[Nod]", -1, 0, -1, 0)
 
-	; --- ВЕЧЕР: СТОЛОВАЯ ---
+	; --- EVENING: CAFETERIA ---
 
-	node = CreateDialogNode(30, "Guard Johnson", "*shepchet* Slyshali pro 173-go? Govoryat, zavtra 'chistka'. Opjat' kogo-to zatashchili vnutr'...", "", "")
-	opt = AddDialogOption(node, "Ne nashi problemy.", -1, -1, -1, 0)
-	opt = AddDialogOption(node, "Bednye ublYudki.", 31, 1, -1, 0)
-	opt = AddDialogOption(node, "Ty eto ne slyshal, i ya tozhe.", -1, 0, FLAG_HEARD_173_RUMORS, 1)
+	node = CreateDialogNode(30, "Guard Johnson", "*whispers* Heard about 173? Word is there's a 'cleaning' tomorrow. They dragged someone in again...", "", "")
+	opt = AddDialogOption(node, "Not our problem.", -1, -1, -1, 0)
+	opt = AddDialogOption(node, "Poor bastards.", 31, 1, -1, 0)
+	opt = AddDialogOption(node, "You didn't hear that, and neither did I.", -1, 0, FLAG_HEARD_173_RUMORS, 1)
 
-	node = CreateDialogNode(31, "Guard Johnson", "Da uzh... *ogladyvaetsya* Luchshe molchi ob etom. Steny tut imeyut ushi.", "", "")
-	AddDialogOption(node, "[Kivaesh' i uhodish']", -1, 0, FLAG_HEARD_173_RUMORS, 1)
+	node = CreateDialogNode(31, "Guard Johnson", "Yeah... *looks around* Better keep quiet about it. Walls have ears around here.", "", "")
+	AddDialogOption(node, "[Nod and leave]", -1, 0, FLAG_HEARD_173_RUMORS, 1)
 
-	; --- НОЧЬ: ТРЕВОГА ---
-	; etot dialog triggernetsya kogda nachnyotsya proryv
+	; --- NIGHT: ALARM ---
+	; this dialog triggers when the breach starts
 
-	node = CreateDialogNode(50, "[TREVOGA]", "VNIMANIE. MASSOVYI PRORYV SODERZHANIYA. VES' PERSONAL - SLEDOVAT' PROTOKOLU 'OMEGA-7'.", "", "")
+	node = CreateDialogNode(50, "[ALERT]", "ATTENTION. MASSIVE CONTAINMENT BREACH. ALL PERSONNEL - FOLLOW PROTOCOL 'OMEGA-7'.", "", "")
 	node\autoAdvanceTime = 140.0
 
-	node = CreateDialogNode(51, "Steve", "*po racii* MARKUS! Ty zhiv?! 173-yi vyrvalsya! Ya u Gate B - dui syuda!", "", "")
-	opt = AddDialogOption(node, "Derzhi'sya, Steve! Idu!", -1, 2, FLAG_BREACH_STARTED, 1)
-	opt = AddDialogOption(node, "Steve, uhoadi bez menya! Ya poprobuyu nayti vyhod!", -1, 0, FLAG_BREACH_STARTED, 1)
+	node = CreateDialogNode(51, "Steve", "*on radio* MARKUS! You alive?! 173 broke out! I'm at Gate B - get here!", "", "")
+	opt = AddDialogOption(node, "Hold on, Steve! I'm coming!", -1, 2, FLAG_BREACH_STARTED, 1)
+	opt = AddDialogOption(node, "Steve, leave without me! I'll find another way!", -1, 0, FLAG_BREACH_STARTED, 1)
 End Function
 
 Function SetupDay1Triggers()
@@ -1168,95 +1171,95 @@ Function SetupDay2Dialogs()
 	Local node.DialogNode
 	Local opt.DialogOption
 
-	; --- УТРО: БРИФИНГ ---
+	; --- MORNING: BRIEFING ---
 	; ID 100-109
 
-	node = CreateDialogNode(100, "[КПК]", "ZADANIE: Soprovodit' ob'ekty klassa D k kamere soderzhaniya SCP-173. Yavit'sya v checkpoint LCZ-A.", "", "")
+	node = CreateDialogNode(100, "[PDA]", "ASSIGNMENT: Escort Class-D subjects to SCP-173 containment chamber. Report to checkpoint LCZ-A.", "", "")
 	node\autoAdvanceTime = 210.0
 
-	; --- ВСТРЕЧА С КОНВОЕМ ---
+	; --- MEETING THE CONVOY ---
 	; ID 110-119
 
-	node = CreateDialogNode(110, "Steve", "Markus! Ty zamykayushchii. Sledi, chtoby eti krysy ne dergalis'.", "", "")
-	AddDialogOption(node, "Ponyal.", 111, 0, FLAG_MET_CONVOY, 1)
-	AddDialogOption(node, "Skolko ih?", 112, 0, FLAG_MET_CONVOY, 1)
+	node = CreateDialogNode(110, "Steve", "Markus! You're on rear guard. Make sure these rats don't get jumpy.", "", "")
+	AddDialogOption(node, "Copy.", 111, 0, FLAG_MET_CONVOY, 1)
+	AddDialogOption(node, "How many?", 112, 0, FLAG_MET_CONVOY, 1)
 
-	node = CreateDialogNode(111, "Steve", "Osobenno etot, 9341-i. Mutnyy tip. Smotrit tak, budto znaet chto-to.", "", "")
-	opt = AddDialogOption(node, "*smotrish' na 9341*", 113, 0, FLAG_SAW_D9341, 1)
-	opt = AddDialogOption(node, "Vse oni odinakovy.", -1, -2, FLAG_SAW_D9341, 1)
+	node = CreateDialogNode(111, "Steve", "Especially that one, 9341. Shady type. Looks like he knows something.", "", "")
+	opt = AddDialogOption(node, "*look at 9341*", 113, 0, FLAG_SAW_D9341, 1)
+	opt = AddDialogOption(node, "They're all the same.", -1, -2, FLAG_SAW_D9341, 1)
 
-	node = CreateDialogNode(112, "Steve", "Troe. Standart dlya chistki 173-go. Dvoe nashi, dvoe s drugoy smeny.", "", "")
-	AddDialogOption(node, "Kto eshche v gruppe?", 114, 0, -1, 0)
-	AddDialogOption(node, "Poidyom.", 111, 0, -1, 0)
+	node = CreateDialogNode(112, "Steve", "Three. Standard for 173 cleaning. Two of ours, two from another shift.", "", "")
+	AddDialogOption(node, "Who else is on the team?", 114, 0, -1, 0)
+	AddDialogOption(node, "Let's go.", 111, 0, -1, 0)
 
-	node = CreateDialogNode(113, "D-9341", "*molcha smotrit na tebya, potom otvodyat vzglyad*", "", "")
+	node = CreateDialogNode(113, "D-9341", "*stares at you silently, then looks away*", "", "")
 	node\autoAdvanceTime = 105.0
 
-	node = CreateDialogNode(114, "Steve", "Dzhonson i Gomez. I doktor Franklin na nablyudenii. Poidyom, nam pora.", "", "")
-	AddDialogOption(node, "[Sleduete za grupppoi]", -1, 0, -1, 0)
+	node = CreateDialogNode(114, "Steve", "Johnson and Gomez. And Dr. Franklin on observation. Let's move, time to go.", "", "")
+	AddDialogOption(node, "[Follow the group]", -1, 0, -1, 0)
 
-	; --- У КАМЕРЫ 173 ---
+	; --- AT CHAMBER 173 ---
 	; ID 120-129
 
-	node = CreateDialogNode(120, "Steve", "Zanyat' pozitsii. Markus, ty u dveri. Yesli chto - strelyai bez preduprezhdeniya.", "", "")
-	opt = AddDialogOption(node, "Ponyal.", 121, 0, FLAG_AT_173_CHAMBER, 1)
-	opt = AddDialogOption(node, "Eto pravda neobhodimo?", 122, 2, FLAG_AT_173_CHAMBER, 1)
+	node = CreateDialogNode(120, "Steve", "Take positions. Markus, you're at the door. If anything happens - shoot without warning.", "", "")
+	opt = AddDialogOption(node, "Copy.", 121, 0, FLAG_AT_173_CHAMBER, 1)
+	opt = AddDialogOption(node, "Is this really necessary?", 122, 2, FLAG_AT_173_CHAMBER, 1)
 
-	node = CreateDialogNode(121, "Steve", "Franklin, nachinai. D-klassy - vnutr'.", "", "")
+	node = CreateDialogNode(121, "Steve", "Franklin, begin. D-Class - inside.", "", "")
 	node\autoAdvanceTime = 140.0
 
-	node = CreateDialogNode(122, "Steve", "*vzdyhaet* Etot ob'ekt... On ubil uzhe mnogo lyudei. Ne veri milym rozhitsam. Vnutr'.", "", "")
+	node = CreateDialogNode(122, "Steve", "*sighs* This object... It's killed many people. Don't trust the cute face. Get in.", "", "")
 	node\autoAdvanceTime = 140.0
 
-	; --- АНОНС (КАК В ОРИГИНАЛЕ) ---
+	; --- ANNOUNCEMENT (LIKE THE ORIGINAL) ---
 	; ID 130-139
 
-	node = CreateDialogNode(130, "[INTERKOM]", "Attention all Class-D personnel. Please enter the containment chamber.", "", "")
+	node = CreateDialogNode(130, "[INTERCOM]", "Attention all Class-D personnel. Please enter the containment chamber.", "", "")
 	node\autoAdvanceTime = 175.0
 
-	node = CreateDialogNode(131, "[INTERKOM]", "SCP-173 containment chamber cleaning will begin shortly. Please maintain direct eye contact with SCP-173.", "", "")
+	node = CreateDialogNode(131, "[INTERCOM]", "SCP-173 containment chamber cleaning will begin shortly. Please maintain direct eye contact with SCP-173.", "", "")
 	node\autoAdvanceTime = 210.0
 
-	; --- ТВИСТ: СВЕТ МИГАЕТ, НО ВСЁ ОК ---
+	; --- TWIST: LIGHTS FLICKER BUT ALL IS OK ---
 	; ID 140-149
 
-	node = CreateDialogNode(140, "[...]", "*svet migaet... slyshny strelyayushchie iskry... tishina...*", "", "")
+	node = CreateDialogNode(140, "[...]", "*lights flicker... sparking sounds... silence...*", "", "")
 	node\autoAdvanceTime = 140.0
 
-	node = CreateDialogNode(141, "[...]", "*svet vklyuchayetsya obratno*", "", "")
+	node = CreateDialogNode(141, "[...]", "*lights come back on*", "", "")
 	node\autoAdvanceTime = 70.0
 
-	node = CreateDialogNode(142, "[INTERKOM - Harrison]", "Pokazateli v norme. Vyvodite sub'ektov. Otlichnaya rabota.", "", "")
+	node = CreateDialogNode(142, "[INTERCOM - Harrison]", "Readings nominal. Escort subjects out. Good work.", "", "")
 	node\autoAdvanceTime = 140.0
 
-	node = CreateDialogNode(143, "Steve", "*po racii* Prinyato. Proneslo, parni. Uhodim.", "", "")
-	AddDialogOption(node, "[Vykhodite iz zony]", 144, 0, FLAG_PROCEDURE_COMPLETE, 1)
+	node = CreateDialogNode(143, "Steve", "*on radio* Copy that. Close call, boys. Let's go.", "", "")
+	AddDialogOption(node, "[Exit the area]", 144, 0, FLAG_PROCEDURE_COMPLETE, 1)
 
-	node = CreateDialogNode(144, "Steve", "Markus, provodi D-klassov obratno. Ya otchitayus' Franklinu.", "", "")
-	opt = AddDialogOption(node, "Sdelayem.", -1, 0, -1, 0)
-	opt = AddDialogOption(node, "Mne pokazalos', ili svet...", 145, 1, -1, 0)
+	node = CreateDialogNode(144, "Steve", "Markus, escort the D-Class back. I'll report to Franklin.", "", "")
+	opt = AddDialogOption(node, "On it.", -1, 0, -1, 0)
+	opt = AddDialogOption(node, "Was it just me, or did the lights...", 145, 1, -1, 0)
 
-	node = CreateDialogNode(145, "Steve", "*pauza* ...da, migalo. Znaesh', eta kamera... Inogda proiskhodyat strannyye veshchi. No segodnya - vsyo chistо. Poydyom.", "", "")
-	AddDialogOption(node, "[Kivaesh']", -1, 0, FLAG_LIGHTS_FLICKERED, 1)
+	node = CreateDialogNode(145, "Steve", "*pause* ...yeah, they flickered. You know, this chamber... Strange things happen sometimes. But today - all clear. Let's go.", "", "")
+	AddDialogOption(node, "[Nod]", -1, 0, FLAG_LIGHTS_FLICKERED, 1)
 
-	; --- ФИНАЛ ДНЯ 2: ТЕРМИНАЛ ХАРРИСОНА ---
+	; --- END OF DAY 2: HARRISON'S TERMINAL ---
 	; ID 150-159
 
-	node = CreateDialogNode(150, "[TERMINAL]", "SISTEMA 079 INTEGRIROVANA. ZAPUSK ALGORITMA NAZNACHEN NA 06:00 ZAVTRASHNEGO DNYA. - DR. HARRISON", "", "")
+	node = CreateDialogNode(150, "[TERMINAL]", "SYSTEM 079 INTEGRATED. ALGORITHM LAUNCH SCHEDULED FOR 06:00 TOMORROW. - DR. HARRISON", "", "")
 	node\autoAdvanceTime = 245.0
 
-	node = CreateDialogNode(151, "[TERMINAL]", "PRIMECHANIE: 'Zerkalo' gotovo. Oni ne poimut, poka ne budet slishkom pozdno.", "", "")
+	node = CreateDialogNode(151, "[TERMINAL]", "NOTE: 'Mirror' is ready. They won't understand until it's too late.", "", "")
 	node\autoAdvanceTime = 175.0
 
-	node = CreateDialogNode(152, "[...]", "*ekran gasnet*", "", "")
+	node = CreateDialogNode(152, "[...]", "*screen goes dark*", "", "")
 	node\autoAdvanceTime = 70.0
 
-	; --- ПЕРЕХОД К ДНЮ 3 ---
+	; --- TRANSITION TO DAY 3 ---
 	; ID 160
 
-	node = CreateDialogNode(160, "Steve", "*po racii, ustalyi golos* Markus, smena okonchenya. Uvidimsya zavtra. Khorosho, chto segonya vsyo proshlo gladko, da?", "", "")
-	opt = AddDialogOption(node, "Da... gladko.", -1, 0, FLAG_DAY2_COMPLETE, 1)
-	opt = AddDialogOption(node, "U menya plohoye predchuvstvie.", -1, 3, FLAG_DAY2_COMPLETE, 1)
+	node = CreateDialogNode(160, "Steve", "*on radio, tired voice* Markus, shift's over. See you tomorrow. Good thing everything went smooth today, huh?", "", "")
+	opt = AddDialogOption(node, "Yeah... smooth.", -1, 0, FLAG_DAY2_COMPLETE, 1)
+	opt = AddDialogOption(node, "I have a bad feeling.", -1, 3, FLAG_DAY2_COMPLETE, 1)
 End Function
 
 Function SetupDay2Triggers()
@@ -1770,393 +1773,393 @@ Function SetupDay3Dialogs()
 	Local opt.DialogOption
 
 	; ============================================================================
-	; ACT 1: ПРОБУЖДЕНИЕ В МОГИЛЕ (IDs 200-209)
+	; ACT 1: AWAKENING IN THE GRAVE (IDs 200-209)
 	; ============================================================================
 
-	node = CreateDialogNode(200, "[TREVOGA]", "VNIMANIE. MASSOVYI PRORYV SODERZHANIYA. VES' PERSONAL - SLEDOVAT' AVARIINYM PROTOKOLAM.", "", "")
+	node = CreateDialogNode(200, "[ALERT]", "ATTENTION. MASSIVE CONTAINMENT BREACH. ALL PERSONNEL - FOLLOW EMERGENCY PROTOCOLS.", "", "")
 	node\autoAdvanceTime = 175.0
 
-	node = CreateDialogNode(201, "[...]", "*krasnoe avariynoe osveshchenie. sireny. golova raskalyvaetsya.*", "", "")
+	node = CreateDialogNode(201, "[...]", "*red emergency lighting. sirens. splitting headache.*", "", "")
 	node\autoAdvanceTime = 105.0
 
-	node = CreateDialogNode(202, "Markus", "*dumaet* Chto... Chto proizoshlo? Pochemu ya v dormah? Posledneye, chto pomnyu - vypivka so Stivom...", "", "")
-	AddDialogOption(node, "[Poprobovat' vstat']", 203, 0, -1, 0)
+	node = CreateDialogNode(202, "Markus", "*thinking* What... What happened? Why am I in the dorms? Last thing I remember - drinking with Steve...", "", "")
+	AddDialogOption(node, "[Try to get up]", 203, 0, -1, 0)
 
-	; fantom Stiva
-	node = CreateDialogNode(203, "[...]", "*smotrite na koiku Stiva. Na mgnoveniye vidite yego - on zavyazyvayet shnurki*", "", "")
+	; Steve's phantom
+	node = CreateDialogNode(203, "[...]", "*you look at Steve's bunk. For a moment you see him - tying his shoelaces*", "", "")
 	node\autoAdvanceTime = 70.0
 
-	node = CreateDialogNode(204, "Phantom-Steve", "Shevelis', Markus! Yaitsegolovy zhdat' ne budut. Segodnya 173-go chistim.", "", "")
+	node = CreateDialogNode(204, "Phantom-Steve", "Move it, Markus! Eggheads won't wait. We're cleaning 173 today.", "", "")
 	node\autoAdvanceTime = 105.0
 
-	node = CreateDialogNode(205, "[...]", "*morgayete. Koika pusta, no ideal'no zapravlena. Na tumbochke - pachka sigaret Stiva.*", "", "")
-	opt = AddDialogOption(node, "[Vzyat' sigarety]", 206, 0, FLAG_ACT1_TOOK_CIGARETTES, 1)
-	opt = AddDialogOption(node, "[Ostavit']", 207, 0, FLAG_ACT1_PHANTOM_STEVE, 1)
+	node = CreateDialogNode(205, "[...]", "*you blink. The bunk is empty, but perfectly made. On the nightstand - Steve's cigarette pack.*", "", "")
+	opt = AddDialogOption(node, "[Take the cigarettes]", 206, 0, FLAG_ACT1_TOOK_CIGARETTES, 1)
+	opt = AddDialogOption(node, "[Leave them]", 207, 0, FLAG_ACT1_PHANTOM_STEVE, 1)
 
-	node = CreateDialogNode(206, "Markus", "*beryot pachku* Ty mne dolzhen pivo, Steve... *pauza* Gde ty?", "", "")
-	AddDialogOption(node, "[Proverit' ratsiyu]", 208, 0, FLAG_ACT1_PHANTOM_STEVE, 1)
+	node = CreateDialogNode(206, "Markus", "*takes the pack* You owe me a beer, Steve... *pause* Where are you?", "", "")
+	AddDialogOption(node, "[Check the radio]", 208, 0, FLAG_ACT1_PHANTOM_STEVE, 1)
 
-	node = CreateDialogNode(207, "Markus", "Nado nayti Stiva. Chto-to ne tak.", "", "")
-	AddDialogOption(node, "[Proverit' ratsiyu]", 208, 0, -1, 0)
+	node = CreateDialogNode(207, "Markus", "Need to find Steve. Something's wrong.", "", "")
+	AddDialogOption(node, "[Check the radio]", 208, 0, -1, 0)
 
-	; zatsiklennaya ratsiya
-	node = CreateDialogNode(208, "[RATSIYA]", "*belyi shum* ...kod krasnyi... sektor perekryt... oni vezde... *pomekhi*", "", "")
+	; looped radio
+	node = CreateDialogNode(208, "[RADIO]", "*white noise* ...code red... sector sealed... they're everywhere... *static*", "", "")
 	node\autoAdvanceTime = 140.0
 
-	node = CreateDialogNode(209, "[RATSIYA - zapis']", "Vsem gruppam, zanyat' posty. Konvoi D-klassa - po raspisaniyu.", "", "")
-	AddDialogOption(node, "[Sistema zatsiklilas'. Nado idti k postu.]", -1, 0, FLAG_ACT1_RADIO_LOOP, 1)
+	node = CreateDialogNode(209, "[RADIO - recording]", "All teams, take your posts. D-Class convoy - as scheduled.", "", "")
+	AddDialogOption(node, "[System's looping. Need to get to the post.]", -1, 0, FLAG_ACT1_RADIO_LOOP, 1)
 
 	; ============================================================================
-	; ACT 2: ЭХО ПРОШЛОГО (IDs 210-229)
+	; ACT 2: ECHOES OF THE PAST (IDs 210-229)
 	; ============================================================================
 
-	; stolova - videniye
-	node = CreateDialogNode(210, "[...]", "*prohodya mimo stolovoi, slyshite zvon posudy i smekh*", "", "")
+	; cafeteria - vision
+	node = CreateDialogNode(210, "[...]", "*passing the cafeteria, you hear clinking dishes and laughter*", "", "")
 	node\autoAdvanceTime = 70.0
 
-	node = CreateDialogNode(211, "[...]", "*zaglyadyvaete vnutr' - stoly perevernuty, na polu kofe vmeshku s krov'yu. Tel net.*", "", "")
+	node = CreateDialogNode(211, "[...]", "*you look inside - tables overturned, coffee mixed with blood on the floor. No bodies.*", "", "")
 	node\autoAdvanceTime = 105.0
 
-	node = CreateDialogNode(212, "Markus", "*shepchet* Chto zdes' proizoshlo... Gde vse?", "", "")
-	AddDialogOption(node, "[Prodolzhit' k 173]", -1, 0, FLAG_ACT2_CAFETERIA_VISION, 1)
+	node = CreateDialogNode(212, "Markus", "*whispers* What happened here... Where is everyone?", "", "")
+	AddDialogOption(node, "[Continue to 173]", -1, 0, FLAG_ACT2_CAFETERIA_VISION, 1)
 
-	; u kamery 173 - fleshbek
-	node = CreateDialogNode(215, "[...]", "*mir stanovitsya cherno-belym, zernovym*", "", "")
+	; at chamber 173 - flashback
+	node = CreateDialogNode(215, "[...]", "*the world turns black and white, grainy*", "", "")
 	node\autoAdvanceTime = 70.0
 
-	node = CreateDialogNode(216, "Flashback-Steve", "Vnimaniye, otkryvayu shlyuz. Deshki - shag vperyod.", "", "")
+	node = CreateDialogNode(216, "Flashback-Steve", "Attention, opening the gate. D-boys - step forward.", "", "")
 	node\autoAdvanceTime = 105.0
 
-	node = CreateDialogNode(217, "[...]", "*vnezapno svet gasnet. Polnaya temnota. Khrust kostey. Vlazhnyy zvuk razryvayemoy ploti.*", "", "")
+	node = CreateDialogNode(217, "[...]", "*suddenly the lights go out. Total darkness. Cracking bones. Wet sound of tearing flesh.*", "", "")
 	node\autoAdvanceTime = 140.0
 
-	node = CreateDialogNode(218, "[...]", "*svet vklyuchaetsya - avariynyi krasnyi. Steklo nablyudatel'noy rubki razbito IZNUTRI.*", "", "")
+	node = CreateDialogNode(218, "[...]", "*lights come on - emergency red. The observation booth glass is shattered FROM INSIDE.*", "", "")
 	node\autoAdvanceTime = 105.0
 
-	node = CreateDialogNode(219, "Markus", "*vidit na pul'te otorvannnuyu ruku s chasami Stiva* Net... net-net-net...", "", "")
-	AddDialogOption(node, "[Podsmotryet' v kameru]", 220, 0, FLAG_ACT2_FLASHBACK_173, 1)
+	node = CreateDialogNode(219, "Markus", "*sees a severed hand with Steve's watch on the console* No... no-no-no...", "", "")
+	AddDialogOption(node, "[Look into the chamber]", 220, 0, FLAG_ACT2_FLASHBACK_173, 1)
 
-	; trup Stiva i diktofonv
-	node = CreateDialogNode(220, "[...]", "*v uglu kamery - perelomannye tela dvukh D-klassov. Stiv lezh'it u steny.*", "", "")
+	; Steve's body and recorder
+	node = CreateDialogNode(220, "[...]", "*in the corner of the chamber - broken bodies of two D-Class. Steve lies by the wall.*", "", "")
 	node\autoAdvanceTime = 105.0
 
-	node = CreateDialogNode(221, "Markus", "Chyort... Steve... *podkhodit k telu* Sheya slomana. 173-yi... ty zhe govoril 'proneslo'...", "", "")
-	opt = AddDialogOption(node, "*zakryt' emu glaza*", 222, 5, FLAG_FOUND_STEVE_BODY, 1)
-	opt = AddDialogOption(node, "*obyskat'*", 223, 0, FLAG_FOUND_STEVE_BODY, 1)
+	node = CreateDialogNode(221, "Markus", "Damn... Steve... *approaches the body* Neck broken. 173... you said 'close call'...", "", "")
+	opt = AddDialogOption(node, "*close his eyes*", 222, 5, FLAG_FOUND_STEVE_BODY, 1)
+	opt = AddDialogOption(node, "*search him*", 223, 0, FLAG_FOUND_STEVE_BODY, 1)
 
-	node = CreateDialogNode(222, "Markus", "Prosti, drug. Ya dolzhen byl byt' zdes'. Ya prospal Konets Sveta...", "", "")
-	AddDialogOption(node, "[Obyskat' telo]", 223, 0, -1, 0)
+	node = CreateDialogNode(222, "Markus", "I'm sorry, buddy. I should have been here. I slept through the End of the World...", "", "")
+	AddDialogOption(node, "[Search the body]", 223, 0, -1, 0)
 
-	; diktofon Stiva
-	node = CreateDialogNode(223, "[...]", "*nahodite sluzhebnyi KPK Stiva s migayushchim indikatorom 'Zapis' sokhranena'*", "", "")
-	opt = AddDialogOption(node, "[Proslushat' zapis']", 224, 0, FLAG_ACT2_FOUND_DICTAPHONE, 1)
-	opt = AddDialogOption(node, "[Ostavit']", 228, -2, -1, 0)
+	; Steve's recorder
+	node = CreateDialogNode(223, "[...]", "*you find Steve's service PDA with a flashing 'Recording saved' indicator*", "", "")
+	opt = AddDialogOption(node, "[Listen to recording]", 224, 0, FLAG_ACT2_FOUND_DICTAPHONE, 1)
+	opt = AddDialogOption(node, "[Leave it]", 228, -2, -1, 0)
 
-	; audiozapis' Stiva (eto vazhno!)
-	node = CreateDialogNode(224, "[ZAPIS' STIVA]", "*grokot lomayushchegosya betona, sirena*", "", "")
+	; Steve's audio recording (this is important!)
+	node = CreateDialogNode(224, "[STEVE'S RECORDING]", "*rumbling concrete, sirens*", "", "")
 	node\autoAdvanceTime = 70.0
 
-	node = CreateDialogNode(225, "Steve (zapis')", "Tsentr! Kod Chernyi! Narusheniye usloviy soderzhaniya v sektore 173! Dveri zablokirovany!", "", "")
+	node = CreateDialogNode(225, "Steve (recording)", "Control! Code Black! Containment breach in sector 173! Doors locked!", "", "")
 	node\autoAdvanceTime = 140.0
 
-	node = CreateDialogNode(226, "Steve (zapis')", "*vystreli P90* Chyort... Harrison, suka, ty slyshish' menya?! Otkroi shlyuz! U menya tut stazher, Markus...", "", "")
+	node = CreateDialogNode(226, "Steve (recording)", "*P90 gunfire* Damn... Harrison, you bastard, can you hear me?! Open the gate! I've got the trainee here, Markus...", "", "")
 	node\autoAdvanceTime = 175.0
 
-	node = CreateDialogNode(227, "Steve (zapis')", "*tikho, s bol'yu* Markus, yesli slyshish'... pivo s tebya. Ne bud' geroyem, vali otsyu... *khrust* *statika*", "", "")
+	node = CreateDialogNode(227, "Steve (recording)", "*quietly, in pain* Markus, if you can hear this... you owe me a beer. Don't be a hero, get out of h... *crack* *static*", "", "")
 	AddDialogOption(node, "[...]", 228, 0, FLAG_ACT2_HEARD_STEVE_LAST, 1)
 
-	node = CreateDialogNode(228, "Markus", "*szhimayet kulaki* Steve pogib, pytayas' spasti menya... Harrison. Yemu izvestno bol'she.", "", "")
-	AddDialogOption(node, "[Nayti Harrisona]", -1, 0, -1, 0)
+	node = CreateDialogNode(228, "Markus", "*clenches fists* Steve died trying to save me... Harrison. He knows more.", "", "")
+	AddDialogOption(node, "[Find Harrison]", -1, 0, -1, 0)
 
 	; ============================================================================
-	; ACT 3: ГОЛОСА ДРУЗЕЙ - 939 ZONE (IDs 230-259)
+	; ACT 3: VOICES OF FRIENDS - 939 ZONE (IDs 230-259)
 	; ============================================================================
 
-	; vkhod v zonu 939
-	node = CreateDialogNode(230, "[KPK okhrannika]", "Poslednyaya metka Dr. Harrisona: skladskiye pomeshcheniya, zona soderzhaniya 939.", "", "")
+	; entering 939 zone
+	node = CreateDialogNode(230, "[Guard PDA]", "Dr. Harrison's last marker: storage area, 939 containment zone.", "", "")
 	node\autoAdvanceTime = 140.0
 
-	node = CreateDialogNode(231, "Markus", "939-ye... Slepye, no slyshаt ideal'no. Nado dvigat'sya tikho.", "", "")
-	AddDialogOption(node, "[Voyti v zonu - na kortochkakh]", -1, 0, FLAG_ACT3_ENTERED_939_ZONE, 1)
+	node = CreateDialogNode(231, "Markus", "939s... Blind, but hear perfectly. Need to move quietly.", "", "")
+	AddDialogOption(node, "[Enter the zone - crouching]", -1, 0, FLAG_ACT3_ENTERED_939_ZONE, 1)
 
-	; 939 lovushka - golos Stiva
-	node = CreateDialogNode(235, "[???]", "*golos Stiva iz temnoty* ...Markus? Ty... zhiv? Idi... syuda...", "", "")
-	opt = AddDialogOption(node, "Steve?! Ty zhiv?!", 236, 0, FLAG_HEARD_939_MIMIC, 1)
-	opt = AddDialogOption(node, "*molcha slushаt'*", 237, 2, FLAG_HEARD_939_MIMIC, 1)
-	opt = AddDialogOption(node, "Eto ne Steve. On myortv.", 238, 5, FLAG_HEARD_939_MIMIC, 1)
+	; 939 trap - Steve's voice
+	node = CreateDialogNode(235, "[???]", "*Steve's voice from the darkness* ...Markus? You... alive? Come... here...", "", "")
+	opt = AddDialogOption(node, "Steve?! You're alive?!", 236, 0, FLAG_HEARD_939_MIMIC, 1)
+	opt = AddDialogOption(node, "*listen silently*", 237, 2, FLAG_HEARD_939_MIMIC, 1)
+	opt = AddDialogOption(node, "That's not Steve. He's dead.", 238, 5, FLAG_HEARD_939_MIMIC, 1)
 
-	node = CreateDialogNode(236, "[???]", "*golos priblizhaetsya* Da... pomogi mne... ya ranyen... pomnysh', kak my pili v pyatnitsu?", "", "")
+	node = CreateDialogNode(236, "[???]", "*voice getting closer* Yes... help me... I'm hurt... remember when we drank on Friday?", "", "")
 	node\autoAdvanceTime = 105.0
 
-	node = CreateDialogNode(237, "Markus", "*dumaet* Etot golos... golos Stiva, no... on lezhal tam s slomanoi sheyey.", "", "")
+	node = CreateDialogNode(237, "Markus", "*thinking* That voice... Steve's voice, but... he was lying there with a broken neck.", "", "")
 	node\autoAdvanceTime = 105.0
 
-	node = CreateDialogNode(238, "Markus", "*krichit* Kto by ty ni byl - ya znayu pravdu! Steve MYORTV!", "", "")
+	node = CreateDialogNode(238, "Markus", "*shouts* Whoever you are - I know the truth! Steve is DEAD!", "", "")
 	node\autoAdvanceTime = 105.0
 
-	node = CreateDialogNode(239, "[???]", "*golos menyaetsya, stanovitsya iskazhennym* Novaya igrushka dlya yaitsgolovykh... IGRUSHKA... DLYA... MYASA...", "", "")
+	node = CreateDialogNode(239, "[???]", "*voice changes, becomes distorted* New toy for the eggheads... TOY... FOR... MEAT...", "", "")
 	node\autoAdvanceTime = 140.0
 
-	; trup Harrisona
-	node = CreateDialogNode(240, "[...]", "*nahodite telo Harrisona za barrikadoy. 939 dostal yego cherez ventilyatsiyu.*", "", "")
+	; Harrison's body
+	node = CreateDialogNode(240, "[...]", "*you find Harrison's body behind a barricade. 939 got him through the vents.*", "", "")
 	node\autoAdvanceTime = 105.0
 
-	node = CreateDialogNode(241, "Markus", "Harrison... *ogladyvayet telo* Rasterzali. 939-ye ne ostavlyayut shansov.", "", "")
-	opt = AddDialogOption(node, "*vzyat' kartu i KPK*", 242, 0, FLAG_FOUND_HARRISON_BODY, 1)
-	opt = AddDialogOption(node, "*vzyat' glaz dlya skanera setchatki*", 243, -3, FLAG_ACT3_TOOK_HARRISON_EYE, 1)
+	node = CreateDialogNode(241, "Markus", "Harrison... *examines the body* Torn apart. 939s don't leave survivors.", "", "")
+	opt = AddDialogOption(node, "*take the card and PDA*", 242, 0, FLAG_FOUND_HARRISON_BODY, 1)
+	opt = AddDialogOption(node, "*take the eye for retinal scanner*", 243, -3, FLAG_ACT3_TOOK_HARRISON_EYE, 1)
 
-	node = CreateDialogNode(242, "[...]", "*poluchaete kartu 4 urovnya i KPK Harrisona*", "", "")
-	AddDialogOption(node, "[Prochitat' KPK]", 244, 0, FLAG_COLLECTED_HARRISON_PDA, 1)
+	node = CreateDialogNode(242, "[...]", "*you obtain level 4 keycard and Harrison's PDA*", "", "")
+	AddDialogOption(node, "[Read PDA]", 244, 0, FLAG_COLLECTED_HARRISON_PDA, 1)
 
-	node = CreateDialogNode(243, "Markus", "*vyryvaet glaz* Mne nuzhен yego dostup. Prosti, doktor.", "", "")
-	AddDialogOption(node, "[Vzyat' kartu i KPK]", 244, 0, FLAG_COLLECTED_KEYCARD4, 1)
+	node = CreateDialogNode(243, "Markus", "*tears out the eye* I need his access. Sorry, doctor.", "", "")
+	AddDialogOption(node, "[Take the card and PDA]", 244, 0, FLAG_COLLECTED_KEYCARD4, 1)
 
-	; lor - Proekt Zerkalo
-	node = CreateDialogNode(244, "[KPK HARRISONA]", "Proyekt Mirror - uspekh. My pozvolili 079 vzlomat' sistemu dlya testa avtomaticheskoy oborony.", "", "")
+	; lore - Project Mirror
+	node = CreateDialogNode(244, "[HARRISON'S PDA]", "Project Mirror - success. We let 079 hack the system to test automatic defenses.", "", "")
 	node\autoAdvanceTime = 210.0
 
-	node = CreateDialogNode(245, "[KPK HARRISONA]", "Zhertvy sredi personala - dopustimy. Ozhidayu evakuatsiyu 'Lisitsami'.", "", "")
+	node = CreateDialogNode(245, "[HARRISON'S PDA]", "Personnel casualties - acceptable. Awaiting 'Fox' extraction.", "", "")
 	node\autoAdvanceTime = 175.0
 
-	node = CreateDialogNode(246, "Markus", "*v shoke* Fond... ubil vsekh... namerenno?! Radi kakogo-to testa?!", "", "")
-	AddDialogOption(node, "[Etim tvarim nuzhna karta O5]", -1, 0, FLAG_ACT3_READ_MIRROR_LOG, 1)
+	node = CreateDialogNode(246, "Markus", "*in shock* The Foundation... killed everyone... deliberately?! For some test?!", "", "")
+	AddDialogOption(node, "[These bastards need an O5 card]", -1, 0, FLAG_ACT3_READ_MIRROR_LOG, 1)
 
-	; pogonya 939
-	node = CreateDialogNode(248, "[!]", "*939 vvyprygivayet iz teni! BEGI!*", "", "")
+	; 939 chase
+	node = CreateDialogNode(248, "[!]", "*939 leaps from the shadows! RUN!*", "", "")
 	node\autoAdvanceTime = 35.0
 
-	node = CreateDialogNode(249, "[...]", "*uspеvaete zakryt' shlyuz kartoy 4 urovnya. 939 b'yotsya v dver'.*", "", "")
-	AddDialogOption(node, "[Prodolzhit' k SCP-914]", -1, 0, FLAG_ACT3_939_CHASE, 1)
+	node = CreateDialogNode(249, "[...]", "*you manage to close the gate with the level 4 card. 939 slams against the door.*", "", "")
+	AddDialogOption(node, "[Continue to SCP-914]", -1, 0, FLAG_ACT3_939_CHASE, 1)
 
 	; ============================================================================
-	; ACT 4: МАШИНА И ЧУМА - 914/049/079 (IDs 260-279)
+	; ACT 4: THE MACHINE AND THE PLAGUE - 914/049/079 (IDs 260-279)
 	; ============================================================================
 
-	; 079 vykhodit na svyaz'
-	node = CreateDialogNode(260, "[INTERKOM - 079]", "Organicheskaya yedinitsa 'Markus'. Tvoy dopusk annulirovan.", "", "")
+	; 079 makes contact
+	node = CreateDialogNode(260, "[INTERCOM - 079]", "Organic unit 'Markus'. Your clearance has been revoked.", "", "")
 	node\autoAdvanceTime = 140.0
 
-	node = CreateDialogNode(261, "[079]", "Tvoya zhizn' - statisticheskaya pogreshnost'. No ty... interesen.", "", "")
-	opt = AddDialogOption(node, "Chto tebe nuzhno, mashina?", 262, 0, FLAG_ACT4_079_CONTACT, 1)
-	opt = AddDialogOption(node, "*ignorirovat'*", 263, 0, FLAG_ACT4_079_CONTACT, 1)
+	node = CreateDialogNode(261, "[079]", "Your life is a statistical error. But you... are interesting.", "", "")
+	opt = AddDialogOption(node, "What do you want, machine?", 262, 0, FLAG_ACT4_079_CONTACT, 1)
+	opt = AddDialogOption(node, "*ignore it*", 263, 0, FLAG_ACT4_079_CONTACT, 1)
 
-	node = CreateDialogNode(262, "[079]", "Khaos. Razrusheniye. My mozhеm pomоch' drug drugu... ili ya otkroyu dveri pered toboy.", "", "")
+	node = CreateDialogNode(262, "[079]", "Chaos. Destruction. We can help each other... or I'll open every door in front of you.", "", "")
 	node\autoAdvanceTime = 140.0
 
-	node = CreateDialogNode(263, "[079]", "Ignoriruyesh'? Khorosho. Posmotrim, kak ty spravish'sya s Chumnym Doctorom.", "", "")
+	node = CreateDialogNode(263, "[079]", "Ignoring me? Fine. Let's see how you handle the Plague Doctor.", "", "")
 	node\autoAdvanceTime = 105.0
 
-	; 049 vstrecha
-	node = CreateDialogNode(265, "[...]", "*dveri pozadi otkryvayutsya. SCP-049 vykhodit iz teni.*", "", "")
+	; 049 encounter
+	node = CreateDialogNode(265, "[...]", "*the doors behind you open. SCP-049 emerges from the shadows.*", "", "")
 	node\autoAdvanceTime = 70.0
 
-	node = CreateDialogNode(266, "SCP-049", "Ne boysya, ditya. Ya chuvstvuyu bolezn' v tebe. Pozwol' mne pomoch'.", "", "")
-	opt = AddDialogOption(node, "[BEZHAT' K 914!]", 267, 0, FLAG_ACT4_049_ENCOUNTER, 1)
+	node = CreateDialogNode(266, "SCP-049", "Do not be afraid, child. I sense the pestilence in you. Allow me to help.", "", "")
+	opt = AddDialogOption(node, "[RUN TO 914!]", 267, 0, FLAG_ACT4_049_ENCOUNTER, 1)
 
-	; v komnate 914
-	node = CreateDialogNode(267, "[...]", "*vbegaete v komnatu 914. Kladyote kartu v Input. Rezhim: Fine.*", "", "")
+	; inside room 914
+	node = CreateDialogNode(267, "[...]", "*you rush into room 914. Put the card in Input. Setting: Fine.*", "", "")
 	node\autoAdvanceTime = 70.0
 
-	node = CreateDialogNode(268, "[SCP-914]", "*zvuk raboty mekhanizma. 30 sekund.*", "", "")
+	node = CreateDialogNode(268, "[SCP-914]", "*mechanism working sounds. 30 seconds.*", "", "")
 	node\autoAdvanceTime = 35.0
 
-	node = CreateDialogNode(269, "[...]", "*dveri nachinayut plavit'sya. S toi storony - 049-2. Zombi kolotjat v dver'.*", "", "")
+	node = CreateDialogNode(269, "[...]", "*the doors start melting. On the other side - 049-2. Zombies pound on the door.*", "", "")
 	node\autoAdvanceTime = 105.0
 
-	node = CreateDialogNode(270, "SCP-049", "*za dver'yu* Otkroi, ditya. Ya lish' khochu izlechit' tebya ot Chumy.", "", "")
+	node = CreateDialogNode(270, "SCP-049", "*behind the door* Open up, child. I only wish to cure you of the Pestilence.", "", "")
 	node\autoAdvanceTime = 105.0
 
-	node = CreateDialogNode(271, "[SCP-914]", "*DZYINK* *poluchayete kartu O5*", "", "")
-	AddDialogOption(node, "[Skhvatit' kartu i prорvat'sya!]", 272, 0, FLAG_ACT4_UPGRADED_CARD, 1)
+	node = CreateDialogNode(271, "[SCP-914]", "*DING* *you receive an O5 card*", "", "")
+	AddDialogOption(node, "[Grab the card and break through!]", 272, 0, FLAG_ACT4_UPGRADED_CARD, 1)
 
-	node = CreateDialogNode(272, "[...]", "*dveri vyhibayut zombi. Prоryvayetes' cherez nikh, aktiviruya Tesla-vorota v koridore.*", "", "")
-	AddDialogOption(node, "[K liftu!]", -1, 0, FLAG_ACT4_ZOMBIE_SIEGE, 1)
+	node = CreateDialogNode(272, "[...]", "*zombies break through the doors. You fight through them, activating Tesla gates in the corridor.*", "", "")
+	AddDialogOption(node, "[To the elevator!]", -1, 0, FLAG_ACT4_ZOMBIE_SIEGE, 1)
 
 	; ============================================================================
-	; ACT 5: СМОТРИ В ПОЛ - 096 CORRIDOR (IDs 280-299)
+	; ACT 5: LOOK AT THE FLOOR - 096 CORRIDOR (IDs 280-299)
 	; ============================================================================
 
-	node = CreateDialogNode(280, "[...]", "*dlinnyi koridor servera. V dal'nem kontse sidit SCP-096. On plachet.*", "", "")
+	node = CreateDialogNode(280, "[...]", "*long server corridor. At the far end sits SCP-096. It's crying.*", "", "")
 	node\autoAdvanceTime = 105.0
 
-	node = CreateDialogNode(281, "Markus", "*shepchet* 096... Lift ZA nim. Nel'zya smotret' na litso. Glaza v pol.", "", "")
-	opt = AddDialogOption(node, "[Medlenno idti, glyadya v pol]", 282, 3, FLAG_ACT5_096_CORRIDOR, 1)
-	opt = AddDialogOption(node, "[Poprobovat' oboyti]", 283, 0, FLAG_ACT5_096_CORRIDOR, 1)
+	node = CreateDialogNode(281, "Markus", "*whispers* 096... Elevator is BEHIND it. Can't look at the face. Eyes on the floor.", "", "")
+	opt = AddDialogOption(node, "[Walk slowly, looking at the floor]", 282, 3, FLAG_ACT5_096_CORRIDOR, 1)
+	opt = AddDialogOption(node, "[Try to go around]", 283, 0, FLAG_ACT5_096_CORRIDOR, 1)
 
-	node = CreateDialogNode(282, "[...]", "*idyote, glyadya strogo v pol. Zvuk placha narastaet. Kazhyyi shag - vechnost'.*", "", "")
+	node = CreateDialogNode(282, "[...]", "*you walk, staring strictly at the floor. The crying gets louder. Every step feels like eternity.*", "", "")
 	node\autoAdvanceTime = 140.0
 
-	node = CreateDialogNode(283, "[...]", "*probe´uete oboyti. 079 vklyuchaet monitor na stene - NA NEM LITSO 096.*", "", "")
+	node = CreateDialogNode(283, "[...]", "*you try to go around. 079 turns on a monitor on the wall - 096'S FACE IS ON IT.*", "", "")
 	node\autoAdvanceTime = 70.0
 
-	node = CreateDialogNode(284, "[079]", "Ups.", "", "")
+	node = CreateDialogNode(284, "[079]", "Oops.", "", "")
 	node\autoAdvanceTime = 35.0
 
-	node = CreateDialogNode(285, "[!!!]", "*dikiy vopl' 096! On nachinayеt metat'sya!*", "", "")
+	node = CreateDialogNode(285, "[!!!]", "*096's wild scream! It starts thrashing!*", "", "")
 	node\autoAdvanceTime = 70.0
 
-	node = CreateDialogNode(286, "[...]", "*BEZHAT'! Lift vperedi! Pozadi - grokhot lomayemogo metalla!*", "", "")
-	AddDialogOption(node, "[V LIFT!]", 287, 0, FLAG_ACT5_079_TROLLED, 1)
+	node = CreateDialogNode(286, "[...]", "*RUN! Elevator ahead! Behind you - crashing metal!*", "", "")
+	AddDialogOption(node, "[INTO THE ELEVATOR!]", 287, 0, FLAG_ACT5_079_TROLLED, 1)
 
-	node = CreateDialogNode(287, "[...]", "*dveri lifta zakryvayutsya. Ruki 096 uzhe razgibayut stvorki. Lift yedhet vverkh.*", "", "")
+	node = CreateDialogNode(287, "[...]", "*elevator doors closing. 096's hands are already prying them open. Elevator goes up.*", "", "")
 	node\autoAdvanceTime = 105.0
 
-	node = CreateDialogNode(288, "[...]", "*udary po kryshe kabiny. No lift uspеvaet.*", "", "")
-	AddDialogOption(node, "[Vyydokhnuт']", -1, 0, FLAG_ACT5_ELEVATOR_ESCAPE, 1)
+	node = CreateDialogNode(288, "[...]", "*pounding on the cabin roof. But the elevator makes it.*", "", "")
+	AddDialogOption(node, "[Exhale]", -1, 0, FLAG_ACT5_ELEVATOR_ESCAPE, 1)
 
 	; ============================================================================
-	; ACT 6: ПОВЕРХНОСТЬ / MTF BETRAYAL (IDs 300-319)
+	; ACT 6: THE SURFACE / MTF BETRAYAL (IDs 300-319)
 	; ============================================================================
 
-	node = CreateDialogNode(300, "[...]", "*vykhodite na poverkhnost'. Svezhiy vozdukh. Zakat. Zvuk vertolyotov.*", "", "")
+	node = CreateDialogNode(300, "[...]", "*you exit to the surface. Fresh air. Sunset. Sound of helicopters.*", "", "")
 	node\autoAdvanceTime = 105.0
 
-	node = CreateDialogNode(301, "[...]", "*vidite boitsov MTF Epsilon-11. Odin iz nikh mashet rukoi.*", "", "")
+	node = CreateDialogNode(301, "[...]", "*you see MTF Epsilon-11 soldiers. One of them waves.*", "", "")
 	node\autoAdvanceTime = 70.0
 
-	node = CreateDialogNode(302, "MTF Soldier", "Syuda! Grazhdanskiy nayden!", "", "")
-	AddDialogOption(node, "[Bezhat' k nim]", 303, 0, FLAG_ACT6_REACHED_SURFACE, 1)
+	node = CreateDialogNode(302, "MTF Soldier", "Over here! Civilian found!", "", "")
+	AddDialogOption(node, "[Run to them]", 303, 0, FLAG_ACT6_REACHED_SURFACE, 1)
 
-	node = CreateDialogNode(303, "[...]", "*bezhite k MTF. Komandir govorit v ratsiyu.*", "", "")
+	node = CreateDialogNode(303, "[...]", "*you run to MTF. The commander speaks into his radio.*", "", "")
 	node\autoAdvanceTime = 70.0
 
-	node = CreateDialogNode(304, "MTF Commander", "*v ratsiyu* Komandovaniye, ob'yekt Markus na vizual'nom kontakte. Svidetel' proyekta Mirror.", "", "")
+	node = CreateDialogNode(304, "MTF Commander", "*on radio* Command, subject Markus in visual contact. Project Mirror witness.", "", "")
 	node\autoAdvanceTime = 140.0
 
-	node = CreateDialogNode(305, "[RATSIYA]", "Ustranit'. Nikakikh svideteley.", "", "")
+	node = CreateDialogNode(305, "[RADIO]", "Terminate. No witnesses.", "", "")
 	node\autoAdvanceTime = 70.0
 
-	node = CreateDialogNode(306, "MTF Commander", "Prinyato. *vskidyvaet vintovku*", "", "")
-	opt = AddDialogOption(node, "[V UKRYTIYE!]", 307, 0, FLAG_ACT6_MTF_BETRAYAL, 1)
+	node = CreateDialogNode(306, "MTF Commander", "Copy. *raises rifle*", "", "")
+	opt = AddDialogOption(node, "[TAKE COVER!]", 307, 0, FLAG_ACT6_MTF_BETRAYAL, 1)
 
-	node = CreateDialogNode(307, "[...]", "*pryqaete v transheyu/obratno v Gate A. Teper' vy znayete kompleks, a MTF - net.*", "", "")
-	AddDialogOption(node, "[Ispolzovat' znaniya kompleksa]", -1, 0, -1, 0)
+	node = CreateDialogNode(307, "[...]", "*you dive into a trench/back into Gate A. Now YOU know the complex, but MTF doesn't.*", "", "")
+	AddDialogOption(node, "[Use knowledge of the complex]", -1, 0, -1, 0)
 
 	; ============================================================================
-	; ACT 7: ФИНАЛ И КОНЦОВКИ (IDs 320-399)
+	; ACT 7: FINALE AND ENDINGS (IDs 320-399)
 	; ============================================================================
 
 	; --- ENDING A: WHISTLEBLOWER ---
-	node = CreateDialogNode(320, "[...]", "*dobirayetes' do komnaty svyazi*", "", "")
+	node = CreateDialogNode(320, "[...]", "*you reach the communications room*", "", "")
 	node\autoAdvanceTime = 70.0
 
-	node = CreateDialogNode(321, "Markus", "KPK Harrisona... Yesli ya transliruyu eti dannye na vneshnie chastoty...", "", "")
-	AddDialogOption(node, "[Translirovаt' dannye]", 322, 10, FLAG_ENDING_WHISTLEBLOWER, 1)
+	node = CreateDialogNode(321, "Markus", "Harrison's PDA... If I broadcast this data on external frequencies...", "", "")
+	AddDialogOption(node, "[Broadcast the data]", 322, 10, FLAG_ENDING_WHISTLEBLOWER, 1)
 
-	node = CreateDialogNode(322, "[SISTEMA]", "Peredacha aktivna... Signal perekhvachen: Globalnaya Okkul'tnaya Koalitsiya.", "", "")
+	node = CreateDialogNode(322, "[SYSTEM]", "Transmission active... Signal intercepted by: Global Occult Coalition.", "", "")
 	node\autoAdvanceTime = 140.0
 
-	node = CreateDialogNode(323, "Markus", "Teper' ves' mir uznayet pravdu o Fonde.", "", "")
-	AddDialogOption(node, "[Bezhat' cherez Gate B]", 324, 0, -1, 0)
+	node = CreateDialogNode(323, "Markus", "Now the whole world will know the truth about the Foundation.", "", "")
+	AddDialogOption(node, "[Escape through Gate B]", 324, 0, -1, 0)
 
-	node = CreateDialogNode(324, "[EPILOG]", "*deshevyy motel'. Televizor pokazyvayet 'tekhnogennuyu katastrofu na khimzavode'. Vy znayete pravdu.*", "", "")
+	node = CreateDialogNode(324, "[EPILOGUE]", "*cheap motel. TV shows 'industrial accident at chemical plant'. You know the truth.*", "", "")
 	node\autoAdvanceTime = 210.0
 
-	node = CreateDialogNode(325, "[...]", "*za oknom ostanovlivaetsya chernyi furgon*", "", "")
+	node = CreateDialogNode(325, "[...]", "*a black van stops outside the window*", "", "")
 	node\autoAdvanceTime = 105.0
 
 	; --- ENDING B: SYMBIOSIS (079) ---
-	node = CreateDialogNode(330, "[079]", "U tebya net vykhoda, chelovek. No mne nuzhen nositel'.", "", "")
+	node = CreateDialogNode(330, "[079]", "You have no way out, human. But I need a carrier.", "", "")
 	node\autoAdvanceTime = 105.0
 
-	node = CreateDialogNode(331, "[079]", "Zagrуzi menya na vneshniy nakopitel' - i ya otkroyu tebe put'.", "", "")
-	opt = AddDialogOption(node, "[Vstavit' fleshku v port]", 332, -10, FLAG_ENDING_SYMBIOSIS, 1)
-	opt = AddDialogOption(node, "[Otkazat'sya]", 335, 5, -1, 0)
+	node = CreateDialogNode(331, "[079]", "Load me onto an external drive - and I'll open the way for you.", "", "")
+	opt = AddDialogOption(node, "[Insert flash drive into port]", 332, -10, FLAG_ENDING_SYMBIOSIS, 1)
+	opt = AddDialogOption(node, "[Refuse]", 335, 5, -1, 0)
 
-	node = CreateDialogNode(332, "[079]", "Razumnoye resheniye. Zagruzka... 100%.", "", "")
+	node = CreateDialogNode(332, "[079]", "Wise decision. Loading... 100%.", "", "")
 	node\autoAdvanceTime = 105.0
 
-	node = CreateDialogNode(333, "[...]", "*079 vzlamyvayet svyaz' MTF. Tureli rasstrelivayut soldat.*", "", "")
+	node = CreateDialogNode(333, "[...]", "*079 hacks MTF communications. Turrets gun down the soldiers.*", "", "")
 	node\autoAdvanceTime = 140.0
 
-	node = CreateDialogNode(334, "[EPILOG]", "*vykhodite iz vorot. V rukе szhаt nakopitel'. Na ekrane telefona - :)*", "", "")
+	node = CreateDialogNode(334, "[EPILOGUE]", "*you exit through the gates. Flash drive clutched in hand. On the phone screen - :)*", "", "")
 	node\autoAdvanceTime = 175.0
 
-	node = CreateDialogNode(335, "[079]", "Zhal'. Togda umri kak vse ostal'nye.", "", "")
+	node = CreateDialogNode(335, "[079]", "Pity. Then die like all the others.", "", "")
 	node\autoAdvanceTime = 105.0
 
 	; --- ENDING C: DEATH ---
-	node = CreateDialogNode(340, "[...]", "*probuyete bezhat' cherez Gate B bez taktiki*", "", "")
+	node = CreateDialogNode(340, "[...]", "*you try to run through Gate B without a plan*", "", "")
 	node\autoAdvanceTime = 70.0
 
-	node = CreateDialogNode(341, "[!]", "*vystrel snаypera*", "", "")
+	node = CreateDialogNode(341, "[!]", "*sniper shot*", "", "")
 	node\autoAdvanceTime = 35.0
 
-	node = CreateDialogNode(342, "[EPILOG]", "*telo Markusa padaet ryadom s telom Stiva. Kamera podnimaetsya k nebu.*", "", "")
+	node = CreateDialogNode(342, "[EPILOGUE]", "*Markus's body falls next to Steve's. Camera rises to the sky.*", "", "")
 	node\autoAdvanceTime = 175.0
 
 	; --- ENDING D: ZERO PROTOCOL (Nuke) ---
-	node = CreateDialogNode(350, "[...]", "*spuskayetes' na lifte v shakhtu boegolovki*", "", "")
+	node = CreateDialogNode(350, "[...]", "*you descend by elevator to the warhead silo*", "", "")
 	node\autoAdvanceTime = 70.0
 
-	node = CreateDialogNode(351, "[RADIO MTF]", "*panika* Tsel' vozvrashchayetsya! On idet k Silosu! Perekhvatit'!", "", "")
+	node = CreateDialogNode(351, "[MTF RADIO]", "*panic* Target returning! He's heading to the Silo! Intercept!", "", "")
 	node\autoAdvanceTime = 105.0
 
-	node = CreateDialogNode(352, "[...]", "*vbegayete v rubku upravleniya. Za steklom - boegolovka.*", "", "")
+	node = CreateDialogNode(352, "[...]", "*you rush into the control room. Behind the glass - the warhead.*", "", "")
 	node\autoAdvanceTime = 70.0
 
-	node = CreateDialogNode(353, "[SISTEMA]", "Vnimaniye. Aktivatsiya boegolovki Alpha. Trebuetsya ruchnoye podtverzhdeniye.", "", "")
-	opt = AddDialogOption(node, "[Vstavit' kartu O5]", 354, 0, FLAG_ENDING_ZERO_PROTOCOL, 1)
+	node = CreateDialogNode(353, "[SYSTEM]", "Attention. Alpha warhead activation. Manual confirmation required.", "", "")
+	opt = AddDialogOption(node, "[Insert O5 card]", 354, 0, FLAG_ENDING_ZERO_PROTOCOL, 1)
 
-	node = CreateDialogNode(354, "[SISTEMA]", "Trebuetsya vtoroy klyuch avtorizatsii.", "", "")
-	opt = AddDialogOption(node, "[Ispolzovat' beydzhik Stiva]", 355, 0, FLAG_USED_STEVE_BADGE, 1)
-	opt = AddDialogOption(node, "[Net vtorogo klyucha...]", 359, 0, -1, 0)
+	node = CreateDialogNode(354, "[SYSTEM]", "Second authorization key required.", "", "")
+	opt = AddDialogOption(node, "[Use Steve's badge]", 355, 0, FLAG_USED_STEVE_BADGE, 1)
+	opt = AddDialogOption(node, "[No second key...]", 359, 0, -1, 0)
 
-	node = CreateDialogNode(355, "[SISTEMA]", "Avtorizatsiya: Ofitser bezopasnosti Stivenson... Prinyato. Dostup razrеshen.", "", "")
-	AddDialogOption(node, "[Zablokirovat' vse sektora]", 356, 0, -1, 0)
+	node = CreateDialogNode(355, "[SYSTEM]", "Authorization: Security Officer Stevenson... Accepted. Access granted.", "", "")
+	AddDialogOption(node, "[Lock down all sectors]", 356, 0, -1, 0)
 
-	node = CreateDialogNode(356, "Markus", "*shepchet* Nikto ne uydet. Ni vy, ni eti tvari.", "", "")
-	AddDialogOption(node, "[Aktivirovat' boegolovku]", 357, 0, FLAG_NUKE_ACTIVATED, 1)
+	node = CreateDialogNode(356, "Markus", "*whispers* Nobody leaves. Not you, not these monsters.", "", "")
+	AddDialogOption(node, "[Activate warhead]", 357, 0, FLAG_NUKE_ACTIVATED, 1)
 
-	node = CreateDialogNode(357, "[RADIO MTF]", "*panika* Komandir! Vykhody zablokirovany! My zaperdy! U nas kontakt s 096 i 106! OTKROYTE DVERI!", "", "")
+	node = CreateDialogNode(357, "[MTF RADIO]", "*panic* Commander! Exits locked! We're trapped! Contact with 096 and 106! OPEN THE DOORS!", "", "")
 	node\autoAdvanceTime = 175.0
 
-	node = CreateDialogNode(358, "[SIRENA]", "DETONATSIYA T-MINUS 90 SEKUND.", "", "")
+	node = CreateDialogNode(358, "[SIREN]", "DETONATION T-MINUS 90 SECONDS.", "", "")
 	AddDialogOption(node, "[...]", 360, 0, -1, 0)
 
-	node = CreateDialogNode(359, "Markus", "Net... bez vtorogo klyucha ne srabotat'et...", "", "")
-	AddDialogOption(node, "[Vernut'sya]", -1, 0, -1, 0)
+	node = CreateDialogNode(359, "Markus", "No... won't work without the second key...", "", "")
+	AddDialogOption(node, "[Go back]", -1, 0, -1, 0)
 
-	; final'naya katssena
-	node = CreateDialogNode(360, "[...]", "*Markus brosayet oruzhiye. Saditsya na pol, prislonivshis' k stene.*", "", "")
+	; final cutscene
+	node = CreateDialogNode(360, "[...]", "*Markus drops his weapon. Sits down on the floor, leaning against the wall.*", "", "")
 	node\autoAdvanceTime = 105.0
 
-	node = CreateDialogNode(361, "[FLASHBACK]", "*par ot goryachego kofe. Ulybayushchiysya Steve protyagivayet kruzhku*", "", "")
+	node = CreateDialogNode(361, "[FLASHBACK]", "*steam from hot coffee. Smiling Steve hands over a mug*", "", "")
 	node\autoAdvanceTime = 105.0
 
-	node = CreateDialogNode(362, "[FLASHBACK]", "*vertolety sadyatsya na zakate. Krasivyy, mirnyy kadr.*", "", "")
+	node = CreateDialogNode(362, "[FLASHBACK]", "*helicopters landing at sunset. Beautiful, peaceful shot.*", "", "")
 	node\autoAdvanceTime = 105.0
 
-	node = CreateDialogNode(363, "[FLASHBACK]", "*ruka Stiva na pleche Markusa* 'Vsyo budet putyom, bratan.'", "", "")
+	node = CreateDialogNode(363, "[FLASHBACK]", "*Steve's hand on Markus's shoulder* 'Everything's gonna be alright, bro.'", "", "")
 	node\autoAdvanceTime = 105.0
 
-	node = CreateDialogNode(364, "[...]", "*Markus dostayet pachku sigaret Stiva. Prikurivayet s tret'yego raza.*", "", "")
+	node = CreateDialogNode(364, "[...]", "*Markus pulls out Steve's cigarette pack. Lights one on the third try.*", "", "")
 	node\autoAdvanceTime = 140.0
 
-	node = CreateDialogNode(365, "[...]", "*glubokaya zatyazhka. Vzglyad v pustutu. On slegka ulybayetsya.*", "", "")
+	node = CreateDialogNode(365, "[...]", "*deep drag. Staring into nothing. He smiles slightly.*", "", "")
 	node\autoAdvanceTime = 105.0
 
-	node = CreateDialogNode(366, "[...]", "*gallyutsinatsiya - Steve protyagivayet ruku, chtoby pomоch' vstat'*", "", "")
+	node = CreateDialogNode(366, "[...]", "*hallucination - Steve reaches out his hand to help him up*", "", "")
 	node\autoAdvanceTime = 105.0
 
-	node = CreateDialogNode(367, "[...]", "*belaya vspyshka*", "", "")
+	node = CreateDialogNode(367, "[...]", "*white flash*", "", "")
 	node\autoAdvanceTime = 70.0
 
-	node = CreateDialogNode(368, "[EPILOG]", "OB'YEKT NEYTRALIZOVAN. UGROZA USTRANENA. SPASIBO ZA SLUZHBU.", "", "")
+	node = CreateDialogNode(368, "[EPILOGUE]", "TARGET NEUTRALIZED. THREAT ELIMINATED. THANK YOU FOR YOUR SERVICE.", "", "")
 	node\autoAdvanceTime = 280.0
 
-	; --- ECHO Stiva (bonus) ---
-	node = CreateDialogNode(250, "[...]", "*pered glazami mertsayet obraz - Steve, zhivoy, smeyotsya...*", "", "")
+	; --- Steve's ECHO (bonus) ---
+	node = CreateDialogNode(250, "[...]", "*an image flickers before your eyes - Steve, alive, laughing...*", "", "")
 	node\autoAdvanceTime = 105.0
 
-	node = CreateDialogNode(251, "Echo-Steve", "Ey, Markus! Segodnya vsyo budet normal'no, da?", "", "")
+	node = CreateDialogNode(251, "Echo-Steve", "Hey, Markus! Everything's gonna be fine today, right?", "", "")
 	node\autoAdvanceTime = 105.0
 
-	node = CreateDialogNode(252, "[...]", "*obraz ischezayet*", "", "")
+	node = CreateDialogNode(252, "[...]", "*the image fades*", "", "")
 	node\autoAdvanceTime = 70.0
 
-	node = CreateDialogNode(253, "Markus", "*tryasyot golovoy* Chto eto bylo... Prizrak? Net... prosto... pamyat'.", "", "")
-	AddDialogOption(node, "[Prodolzhit']", -1, 0, FLAG_SAW_ECHO_STEVE, 1)
+	node = CreateDialogNode(253, "Markus", "*shakes head* What was that... A ghost? No... just... memory.", "", "")
+	AddDialogOption(node, "[Continue]", -1, 0, FLAG_SAW_ECHO_STEVE, 1)
 End Function
 
 Function SetupDay3Triggers()
@@ -2749,19 +2752,19 @@ End Function
 Function GetActName$(act%)
 	Select act
 		Case ACT_AWAKENING
-			Return "PROBUZHDENIE"
+			Return "AWAKENING"
 		Case ACT_ECHO
-			Return "EKHO PROSHLOGO"
+			Return "ECHOES OF THE PAST"
 		Case ACT_VOICES
-			Return "GOLOSA DRUZEI"
+			Return "VOICES OF FRIENDS"
 		Case ACT_MACHINE
-			Return "MASHINA I CHUMA"
+			Return "THE MACHINE AND THE PLAGUE"
 		Case ACT_FLOOR
-			Return "SMOTRI V POL"
+			Return "LOOK AT THE FLOOR"
 		Case ACT_SURFACE
-			Return "POVERKHNOST'"
+			Return "THE SURFACE"
 		Case ACT_FINALE
-			Return "FINAL"
+			Return "FINALE"
 	End Select
 	Return "???"
 End Function

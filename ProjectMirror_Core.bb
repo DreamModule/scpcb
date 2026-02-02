@@ -102,11 +102,15 @@ Function InitProjectMirror()
 		InitGameplayMechanics()
 	EndIf
 
-	; --- СПАВН ОХРАННИКА ---
-	; костыль: ищем комнату кафетерии и телепортим туда
-	If MirrorUseCustomSpawn And CurrentDay = 1 Then
-		SpawnGuardAtCafeteria()
-		GiveGuardEquipment()
+	; --- GUARD SPAWN ---
+	; Find cafeteria room and teleport player there
+	If MirrorUseCustomSpawn Then
+		If SpawnGuardAtCafeteria() Then
+			GiveGuardEquipment()
+			DebugLog "Guard spawn complete"
+		Else
+			DebugLog "WARNING: Guard spawn failed - will retry on first update"
+		EndIf
 	EndIf
 
 	Local initTime% = MilliSecs() - startTime
@@ -115,13 +119,17 @@ Function InitProjectMirror()
 	ProjectMirrorInitialized = True
 End Function
 
-; спавн в кафетерии - день 1, утро
-Function SpawnGuardAtCafeteria()
+; guard spawn in cafeteria - Day 1 morning
+Global GuardSpawnComplete% = False
+
+Function SpawnGuardAtCafeteria%()
+	If GuardSpawnComplete Then Return True
+
 	Local spawnRoom.Rooms = Null
 
 	For r.Rooms = Each Rooms
 		If r\RoomTemplate <> Null Then
-			If r\RoomTemplate\Name = MirrorSpawnRoom Then
+			If Lower(r\RoomTemplate\Name) = Lower(MirrorSpawnRoom) Then
 				spawnRoom = r
 				Exit
 			EndIf
@@ -129,7 +137,7 @@ Function SpawnGuardAtCafeteria()
 	Next
 
 	If spawnRoom <> Null Then
-		; центр комнаты + немного вверх чтоб не застрять
+		; room center + slightly up to avoid getting stuck
 		Local spawnX# = EntityX(spawnRoom\obj)
 		Local spawnY# = 0.5
 		Local spawnZ# = EntityZ(spawnRoom\obj)
@@ -138,10 +146,13 @@ Function SpawnGuardAtCafeteria()
 		ResetEntity Collider
 
 		PlayerRoom = spawnRoom
+		GuardSpawnComplete = True
 
 		DebugLog "Spawned guard at " + MirrorSpawnRoom
+		Return True
 	Else
 		DebugLog "WARNING: spawn room not found: " + MirrorSpawnRoom
+		Return False
 	EndIf
 End Function
 
@@ -208,7 +219,15 @@ Function UpdateProjectMirror()
 
 	Local startTime% = MilliSecs()
 
-	; апдейт сюжета
+	; Retry guard spawn if it failed during init
+	If MirrorUseCustomSpawn And (Not GuardSpawnComplete) Then
+		If SpawnGuardAtCafeteria() Then
+			GiveGuardEquipment()
+			DebugLog "Guard spawn completed on update"
+		EndIf
+	EndIf
+
+	; Story update
 	If MirrorStoryEnabled Then
 		UpdateDayTransition()
 		UpdateDialog()
@@ -297,26 +316,26 @@ Function CheckActTitleDisplay()
 
 	Select CurrentAct
 		Case ACT_AWAKENING
-			title = "AKT I"
-			subtitle = "PROBUZHDENIE V MOGILE"
+			title = "ACT I"
+			subtitle = "AWAKENING IN THE GRAVE"
 		Case ACT_ECHO
-			title = "AKT II"
-			subtitle = "EKHO PROSHLOGO"
+			title = "ACT II"
+			subtitle = "ECHOES OF THE PAST"
 		Case ACT_VOICES
-			title = "AKT III"
-			subtitle = "GOLOSA DRUZEI"
+			title = "ACT III"
+			subtitle = "VOICES OF FRIENDS"
 		Case ACT_MACHINE
-			title = "AKT IV"
-			subtitle = "MASHINA I CHUMA"
+			title = "ACT IV"
+			subtitle = "THE MACHINE AND THE PLAGUE"
 		Case ACT_FLOOR
-			title = "AKT V"
-			subtitle = "SMOTRI V POL"
+			title = "ACT V"
+			subtitle = "LOOK AT THE FLOOR"
 		Case ACT_SURFACE
-			title = "AKT VI"
-			subtitle = "POVERKHNOST'"
+			title = "ACT VI"
+			subtitle = "THE SURFACE"
 		Case ACT_FINALE
-			title = "AKT VII"
-			subtitle = "FINAL"
+			title = "ACT VII"
+			subtitle = "FINALE"
 	End Select
 
 	If title <> "" Then
@@ -327,6 +346,9 @@ End Function
 Function RenderProjectMirror()
 	If Not ProjectMirrorInitialized Then Return
 	If Not ProjectMirrorEnabled Then Return
+
+	; Reset font to avoid ESC menu issues
+	AASetFont Font1
 
 	Local startTime% = MilliSecs()
 
@@ -393,10 +415,10 @@ Function RenderNukeCountdown()
 	Local tw% = StringWidth(countStr) * 2  ; uvеlichennyy
 	Text gw / 2 - tw / 2, 30, countStr
 
-	; migayushchee OPASNOST'
+	; flashing DANGER
 	If (MilliSecs() / 500) Mod 2 = 0 Then
 		Color 255, 0, 0
-		Local warn$ = "!!! BOEGOLOVKA AKTIVIROVANA !!!"
+		Local warn$ = "!!! WARHEAD ACTIVATED !!!"
 		tw = StringWidth(warn)
 		Text gw / 2 - tw / 2, 60, warn
 	EndIf
@@ -778,7 +800,7 @@ Function ForceActChange(act%)
 			SetStoryFlag(FLAG_ACT6_MTF_BETRAYAL, 1)
 	End Select
 
-	ShowActTitle(act, "AKT " + act, GetActName(act))
+	ShowActTitle(act, "ACT " + act, GetActName(act))
 End Function
 
 Function SetupMTFFoxSquad()

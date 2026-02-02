@@ -126,6 +126,9 @@ End Function
 Function RenderMirrorUI()
 	If Not MirrorHUDVisible Then Return
 
+	; Reset font to default game font to avoid ESC menu issues
+	AASetFont Font1
+
 	Local gw% = GraphicsWidth()
 	Local gh% = GraphicsHeight()
 
@@ -207,7 +210,7 @@ Function RenderSanityMeter(gw%, gh%)
 
 	; tekst
 	Color 200, 200, 200
-	Local label$ = "RASSUDOK"
+	Local label$ = "SANITY"
 	Text x, y - 15, label
 
 	; protsent
@@ -217,10 +220,10 @@ Function RenderSanityMeter(gw%, gh%)
 	; uroven'
 	Local levelName$ = ""
 	Select level
-		Case 0: levelName = "NORMA"
-		Case 1: levelName = "TREVOGA"
-		Case 2: levelName = "PARANOYIA"
-		Case 3: levelName = "ISTERIYA"
+		Case 0: levelName = "NORMAL"
+		Case 1: levelName = "ANXIETY"
+		Case 2: levelName = "PARANOIA"
+		Case 3: levelName = "HYSTERIA"
 	End Select
 
 	If level > 0 Then
@@ -243,7 +246,7 @@ Function RenderDayIndicator(gw%, gh%)
 
 	; den'
 	Color 150, 150, 150
-	Text x, y, "DEN' " + CurrentDay
+	Text x, y, "DAY " + CurrentDay
 
 	; akt (tol'ko den' 3)
 	If CurrentDay = 3 And CurrentAct > 0 Then
@@ -336,7 +339,7 @@ Function SetObjective(text$, subtext$ = "")
 	ObjectiveSubtext = subtext
 	ObjectiveTimer = 0.0
 
-	AddNotification("Novaya tsel': " + text)
+	AddNotification("New objective: " + text)
 End Function
 
 Function ClearObjective()
@@ -359,7 +362,7 @@ Function RenderObjective(gw%, gh%)
 
 	; zagolovok
 	Color 180, 150, 50
-	Text x, y, "TSEL':"
+	Text x, y, "OBJECTIVE:"
 
 	; tekst
 	Color 200, 200, 200

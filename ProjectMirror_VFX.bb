@@ -469,17 +469,17 @@ Function StartEndingSequence(endingType%)
 
 	Select endingType
 		Case 1  ; Whistleblower
-			EndingText = "RAZOBLACHITEL'"
-			EndingSubtext = "Pravda vyrvana na svobodu. No okhota nachalas'."
+			EndingText = "WHISTLEBLOWER"
+			EndingSubtext = "The truth is out. But the hunt has begun."
 		Case 2  ; Symbiosis
-			EndingText = "SIMBIOZ"
-			EndingSubtext = "079 svoboden. Mir obrechyon."
+			EndingText = "SYMBIOSIS"
+			EndingSubtext = "079 is free. The world is doomed."
 		Case 3  ; Death
-			EndingText = "SMERT'"
-			EndingSubtext = "Yeshcho odin raskhodnyi material."
+			EndingText = "DEATH"
+			EndingSubtext = "Another expendable asset."
 		Case 4  ; Zero Protocol
-			EndingText = "NULEVOI PROTOKOL"
-			EndingSubtext = "Ob'yekt neytralizovan. Spasibo za sluzhbu."
+			EndingText = "ZERO PROTOCOL"
+			EndingSubtext = "Target neutralized. Thank you for your service."
 	End Select
 End Function
 
